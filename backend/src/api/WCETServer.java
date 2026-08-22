@@ -1,3 +1,4 @@
+
 package api;
 
 import com.sun.net.httpserver.HttpExchange;
@@ -9,6 +10,7 @@ import cfg.CFGBuilder;
 import cfg.CFGNode;
 import analysis.AbstractInterpreter;
 import analysis.AbstractValue;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -21,6 +23,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class WCETServer {
+
+    // ==========================================
+    // START SERVER
+    // ==========================================
 
     public static void main(String[] args) throws Exception {
 
@@ -48,8 +54,18 @@ public class WCETServer {
         server.start();
     }
 
+
+    // ==========================================
+    // HANDLE ANALYZE REQUEST
+    // ==========================================
+
     private static void handleAnalyze(
-            HttpExchange exchange) throws IOException {
+            HttpExchange exchange)
+            throws IOException {
+
+        // ------------------------------------------
+        // CORS
+        // ------------------------------------------
 
         exchange.getResponseHeaders().add(
                 "Access-Control-Allow-Origin",
@@ -66,12 +82,26 @@ public class WCETServer {
                 "POST, OPTIONS"
         );
 
+
+        // ------------------------------------------
+        // OPTIONS REQUEST
+        // ------------------------------------------
+
         if (exchange.getRequestMethod()
                 .equalsIgnoreCase("OPTIONS")) {
 
-            exchange.sendResponseHeaders(204, -1);
+            exchange.sendResponseHeaders(
+                    204,
+                    -1
+            );
+
             return;
         }
+
+
+        // ------------------------------------------
+        // ONLY POST ALLOWED
+        // ------------------------------------------
 
         if (!exchange.getRequestMethod()
                 .equalsIgnoreCase("POST")) {
@@ -85,9 +115,10 @@ public class WCETServer {
             return;
         }
 
-        // ==============================
+
+        // ==========================================
         // READ SOURCE CODE
-        // ==============================
+        // ==========================================
 
         InputStream input =
                 exchange.getRequestBody();
@@ -98,14 +129,20 @@ public class WCETServer {
                         StandardCharsets.UTF_8
                 );
 
-        System.out.println("Received code:");
+        System.out.println();
+        System.out.println(
+                "===== RECEIVED SOURCE CODE ====="
+        );
+
         System.out.println(code);
 
-        // ==============================
-        // BASIC ANALYSIS
-        // ==============================
 
-        int lines = countLines(code);
+        // ==========================================
+        // BASIC CODE ANALYSIS
+        // ==========================================
+
+        int lines =
+                countLines(code);
 
         int loopIterations =
                 detectLoopBound(code);
@@ -116,9 +153,10 @@ public class WCETServer {
         int worstPathCost =
                 calculateWorstPath(code);
 
-        // ==============================
-        // WCET
-        // ==============================
+
+        // ==========================================
+        // WCET CALCULATION
+        // ==========================================
 
         WCETEstimator estimator =
                 new WCETEstimator();
@@ -129,9 +167,10 @@ public class WCETServer {
                         loopIterations
                 );
 
-        // ==============================
-        // BUILD CFG
-        // ==============================
+
+        // ==========================================
+        // BUILD CONTROL FLOW GRAPH
+        // ==========================================
 
         List<String> statements =
                 extractStatements(code);
@@ -142,85 +181,154 @@ public class WCETServer {
         CFG cfg =
                 builder.buildCFG(statements);
 
-        // Display CFG in backend console
+
+        // Display CFG in backend terminal
+
         cfg.displayCFG();
 
-        // ==============================
-        // CREATE CFG JSON
-        // ==============================
+
+        // ==========================================
+        // BUILD CFG JSON
+        // ==========================================
 
         String cfgJson =
                 buildCFGJson(cfg);
-                // --------------------------------
-// ABSTRACT STATE ANALYSIS
-// --------------------------------
 
-AbstractInterpreter interpreter =
-        new AbstractInterpreter();
 
-interpreter.analyze(code);
-// --------------------------------
-// BUILD ABSTRACT STATE JSON
-// --------------------------------
+        // ==========================================
+        // ABSTRACT INTERPRETATION
+        // ==========================================
 
-StringBuilder abstractState =
-        new StringBuilder();
+        AbstractInterpreter interpreter =
+                new AbstractInterpreter();
 
-abstractState.append("[");
+        interpreter.analyze(code);
 
-boolean firstVariable = true;
 
-for (Map.Entry<String, AbstractValue> entry :
-        interpreter.getVariables().entrySet()) {
+        // ==========================================
+        // BUILD ABSTRACT STATE JSON
+        // ==========================================
 
-    if (!firstVariable) {
-        abstractState.append(",");
-    }
+        StringBuilder abstractState =
+                new StringBuilder();
 
-    firstVariable = false;
+        abstractState.append("[");
 
-    abstractState.append("{")
-            .append("\"variable\":\"")
-            .append(entry.getKey())
-            .append("\",")
-            .append("\"lower\":")
-            .append(entry.getValue().getLower())
-            .append(",")
-            .append("\"upper\":")
-            .append(entry.getValue().getUpper())
-            .append("}");
-}
+        boolean firstVariable =
+                true;
 
-abstractState.append("]");
-        // ==============================
+
+        for (
+                Map.Entry<String, AbstractValue> entry :
+                interpreter.getVariables().entrySet()
+        ) {
+
+            if (!firstVariable) {
+
+                abstractState.append(",");
+            }
+
+            firstVariable = false;
+
+
+            abstractState.append("{");
+
+            abstractState
+                    .append("\"variable\":\"")
+                    .append(
+                            escapeJson(
+                                    entry.getKey()
+                            )
+                    )
+                    .append("\",");
+
+
+            abstractState
+                    .append("\"lower\":")
+                    .append(
+                            entry.getValue()
+                                    .getLower()
+                    )
+                    .append(",");
+
+
+            abstractState
+                    .append("\"upper\":")
+                    .append(
+                            entry.getValue()
+                                    .getUpper()
+                    );
+
+
+            abstractState.append("}");
+        }
+
+
+        abstractState.append("]");
+
+
+        // ==========================================
         // JSON RESPONSE
-        // ==============================
+        // ==========================================
 
         String response =
-       
-        "{"
-        + "\"status\":\"success\","
-        + "\"message\":\"Code analyzed successfully\","
-        + "\"wcet\":" + wcet + ","
-        + "\"loopIterations\":" + loopIterations + ","
-        + "\"operationCost\":" + operationCost + ","
-        + "\"worstPathCost\":" + worstPathCost + ","
-        + "\"cfg\":" + cfgJson + ","
-        + "\"loopVariable\":\""
-        + escapeJson(interpreter.getLoopVariable())
-        + "\","
-        + "\"maximumIterations\":"
-        + interpreter.getMaximumIterations()
-        + ","
-        + "\"abstractState\":"
-        + abstractState
-        + "}";
+                "{"
+
+                + "\"status\":\"success\","
+
+                + "\"message\":\"Code analyzed successfully\","
+
+                + "\"lines\":"
+                + lines
+                + ","
+
+                + "\"wcet\":"
+                + wcet
+                + ","
+
+                + "\"loopIterations\":"
+                + loopIterations
+                + ","
+
+                + "\"operationCost\":"
+                + operationCost
+                + ","
+
+                + "\"worstPathCost\":"
+                + worstPathCost
+                + ","
+
+                + "\"loopVariable\":\""
+                + escapeJson(
+                        interpreter.getLoopVariable()
+                )
+                + "\","
+
+                + "\"maximumIterations\":"
+                + interpreter.getMaximumIterations()
+                + ","
+
+                + "\"abstractState\":"
+                + abstractState
+                + ","
+
+                + "\"cfg\":"
+                + cfgJson
+
+                + "}";
+
+
+        // ==========================================
+        // SEND RESPONSE
+        // ==========================================
+
         sendResponse(
                 exchange,
                 200,
                 response
         );
     }
+
 
     // ==========================================
     // EXTRACT STATEMENTS FOR CFG
@@ -232,61 +340,104 @@ abstractState.append("]");
         List<String> statements =
                 new ArrayList<>();
 
+
         String[] lines =
                 code.split("\\R");
 
+
         for (String line : lines) {
 
-            line = line.trim();
+            line =
+                    line.trim();
+
 
             if (line.isEmpty()) {
+
                 continue;
             }
 
-            // Ignore opening/closing braces
+
+            // Ignore braces
+
             if (line.equals("{")
                     || line.equals("}")) {
+
                 continue;
             }
 
-            // Variable declaration
-            if (line.startsWith("int ")) {
-                statements.add(
-                        "STATEMENT: " + line
-                );
-            }
 
-            // FOR loop
-            else if (line.startsWith("for")) {
+            // --------------------------------------
+            // FOR LOOP
+            // --------------------------------------
+
+            if (line.startsWith("for")) {
+
                 statements.add(
                         "FOR LOOP: " + line
                 );
+
+                continue;
             }
 
-            // WHILE loop
-            else if (line.startsWith("while")) {
+
+            // --------------------------------------
+            // WHILE LOOP
+            // --------------------------------------
+
+            if (line.startsWith("while")) {
+
                 statements.add(
                         "WHILE LOOP: " + line
                 );
+
+                continue;
             }
 
+
+            // --------------------------------------
             // IF
-            else if (line.startsWith("if")) {
+            // --------------------------------------
+
+            if (line.startsWith("if")) {
+
                 statements.add(
                         "IF: " + line
                 );
+
+                continue;
             }
 
-            // Other statements
-            else if (line.contains("=")) {
+
+            // --------------------------------------
+            // INTEGER DECLARATION
+            // --------------------------------------
+
+            if (line.startsWith("int ")) {
+
+                statements.add(
+                        "STATEMENT: " + line
+                );
+
+                continue;
+            }
+
+
+            // --------------------------------------
+            // OTHER ASSIGNMENTS
+            // --------------------------------------
+
+            if (line.contains("=")) {
+
                 statements.add(
                         "STATEMENT: " + line
                 );
             }
         }
 
+
         return statements;
     }
+
 
     // ==========================================
     // BUILD CFG JSON
@@ -298,109 +449,182 @@ abstractState.append("]");
         StringBuilder json =
                 new StringBuilder();
 
+
         json.append("{");
 
-        // --------------------------
-        // NODES
-        // --------------------------
 
-        json.append("\"nodes\":[");
+        // ==========================================
+        // NODES
+        // ==========================================
+
+        json.append(
+                "\"nodes\":["
+        );
+
 
         List<CFGNode> nodes =
                 cfg.getNodes();
 
-        for (int i = 0;
+
+        for (
+                int i = 0;
                 i < nodes.size();
-                i++) {
+                i++
+        ) {
 
             CFGNode node =
                     nodes.get(i);
 
+
             json.append("{");
 
+
             json.append(
-                    "\"id\":" +
+                    "\"id\":"
+            );
+
+            json.append(
                     node.getId()
             );
 
+
             json.append(",");
 
+
             json.append(
-                    "\"statement\":\"" +
+                    "\"statement\":\""
+            );
+
+            json.append(
                     escapeJson(
                             node.getStatement()
-                    ) +
-                    "\""
+                    )
             );
+
+            json.append("\"");
+
 
             json.append("}");
 
-            if (i < nodes.size() - 1) {
+
+            if (
+                    i < nodes.size() - 1
+            ) {
+
                 json.append(",");
             }
         }
 
+
         json.append("],");
 
-        // --------------------------
+
+        // ==========================================
         // EDGES
-        // --------------------------
+        // ==========================================
 
-        json.append("\"edges\":[");
+        json.append(
+                "\"edges\":["
+        );
 
-        boolean firstEdge = true;
+
+        boolean firstEdge =
+                true;
+
 
         for (CFGNode from :
                 nodes) {
 
+
             List<CFGNode> nextNodes =
-                    cfg.getEdges().get(from);
+                    cfg.getEdges()
+                            .get(from);
+
 
             if (nextNodes == null) {
+
                 continue;
             }
+
 
             for (CFGNode to :
                     nextNodes) {
 
+
                 if (!firstEdge) {
+
                     json.append(",");
                 }
 
+
                 json.append("{");
 
+
                 json.append(
-                        "\"from\":" +
+                        "\"from\":"
+                );
+
+                json.append(
                         from.getId()
                 );
 
+
                 json.append(",");
 
+
                 json.append(
-                        "\"to\":" +
+                        "\"to\":"
+                );
+
+                json.append(
                         to.getId()
                 );
 
+
                 json.append("}");
+
 
                 firstEdge = false;
             }
         }
 
+
         json.append("]");
+
 
         json.append("}");
 
+
         return json.toString();
     }
+
+
+    // ==========================================
+    // ESCAPE JSON
+    // ==========================================
 
     private static String escapeJson(
             String text) {
 
         return text
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"");
+                .replace(
+                        "\\",
+                        "\\\\"
+                )
+                .replace(
+                        "\"",
+                        "\\\""
+                )
+                .replace(
+                        "\r",
+                        "\\r"
+                )
+                .replace(
+                        "\n",
+                        "\\n"
+                );
     }
+
 
     // ==========================================
     // COUNT LINES
@@ -411,19 +635,27 @@ abstractState.append("]");
 
         int count = 0;
 
-        for (String line :
-                code.split("\\R")) {
 
-            if (!line.trim().isEmpty()) {
+        for (
+                String line :
+                code.split("\\R")
+        ) {
+
+            if (
+                    !line.trim().isEmpty()
+            ) {
+
                 count++;
             }
         }
 
+
         return count;
     }
 
+
     // ==========================================
-    // LOOP BOUND
+    // DETECT LOOP BOUND
     // ==========================================
 
     private static int detectLoopBound(
@@ -434,72 +666,152 @@ abstractState.append("]");
                         "for\\s*\\([^;]*;\\s*\\w+\\s*<\\s*(\\d+)"
                 );
 
+
         Matcher matcher =
                 loopPattern.matcher(code);
 
-        int total = 1;
 
-        boolean found = false;
+        int total =
+                1;
 
-        while (matcher.find()) {
+
+        boolean found =
+                false;
+
+
+        while (
+                matcher.find()
+        ) {
 
             found = true;
+
 
             int bound =
                     Integer.parseInt(
                             matcher.group(1)
                     );
 
+
             total *= bound;
         }
 
-        return found ? total : 1;
+
+        return found
+                ? total
+                : 1;
     }
 
+
     // ==========================================
-    // OPERATION COST
+    // CALCULATE OPERATION COST
     // ==========================================
 
     private static int calculateOperationCost(
             String code) {
 
-        int cost = 0;
+        int cost =
+                0;
 
-        cost += count(code, "+");
-        cost += count(code, "-");
-        cost += count(code, "*");
-        cost += count(code, "/");
 
-        cost += count(code, "<");
-        cost += count(code, ">");
-        cost += count(code, "==");
+        cost += count(
+                code,
+                "+"
+        );
 
-        cost += count(code, "=");
 
-        cost += count(code, "[");
+        cost += count(
+                code,
+                "-"
+        );
+
+
+        cost += count(
+                code,
+                "*"
+        );
+
+
+        cost += count(
+                code,
+                "/"
+        );
+
+
+        cost += count(
+                code,
+                "<"
+        );
+
+
+        cost += count(
+                code,
+                ">"
+        );
+
+
+        cost += count(
+                code,
+                "=="
+        );
+
+
+        cost += count(
+                code,
+                "="
+        );
+
+
+        cost += count(
+                code,
+                "["
+        );
+
 
         if (cost == 0) {
+
             cost = 1;
         }
+
 
         return cost;
     }
 
+
     // ==========================================
-    // WORST PATH
+    // CALCULATE WORST PATH
     // ==========================================
 
     private static int calculateWorstPath(
             String code) {
 
-        int cost = 0;
+        int cost =
+                0;
 
-        cost += count(code, "if");
-        cost += count(code, "for");
-        cost += count(code, "while");
 
-        return Math.max(cost, 1);
+        cost += count(
+                code,
+                "if"
+        );
+
+
+        cost += count(
+                code,
+                "for"
+        );
+
+
+        cost += count(
+                code,
+                "while"
+        );
+
+
+        return Math.max(
+                cost,
+                1
+        );
     }
+
 
     // ==========================================
     // COUNT OCCURRENCES
@@ -509,20 +821,34 @@ abstractState.append("]");
             String text,
             String word) {
 
-        int count = 0;
-        int index = 0;
+        int count =
+                0;
 
-        while ((index =
-                text.indexOf(word, index))
-                != -1) {
+
+        int index =
+                0;
+
+
+        while (
+                (index =
+                        text.indexOf(
+                                word,
+                                index
+                        )
+                ) != -1
+        ) {
 
             count++;
 
-            index += word.length();
+
+            index +=
+                    word.length();
         }
+
 
         return count;
     }
+
 
     // ==========================================
     // SEND RESPONSE
@@ -534,25 +860,33 @@ abstractState.append("]");
             String response)
             throws IOException {
 
+
         byte[] data =
                 response.getBytes(
                         StandardCharsets.UTF_8
                 );
+
 
         exchange.getResponseHeaders().set(
                 "Content-Type",
                 "application/json"
         );
 
+
         exchange.sendResponseHeaders(
                 statusCode,
                 data.length
         );
 
+
         OutputStream output =
                 exchange.getResponseBody();
 
+
         output.write(data);
+
+
         output.close();
     }
 }
+

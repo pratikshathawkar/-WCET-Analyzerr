@@ -1,24 +1,26 @@
+
 package cfg;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class CFGBuilder {
 
-    public CFG buildCFG(
-            List<String> statements) {
+    public CFG buildCFG(List<String> statements) {
 
         CFG cfg = new CFG();
 
-        List<CFGNode> nodes =
-                new ArrayList<>();
+        List<CFGNode> nodes = new ArrayList<>();
 
         int id = 1;
 
+        // ==========================================
+        // CREATE NODES
+        // ==========================================
 
-        // Create nodes
-        for (String statement :
-                statements) {
+        for (String statement : statements) {
 
             CFGNode node =
                     new CFGNode(
@@ -31,110 +33,119 @@ public class CFGBuilder {
             nodes.add(node);
         }
 
+        // No nodes
+        if (nodes.isEmpty()) {
+            return cfg;
+        }
 
-        // Create normal flow
-        for (int i = 0;
-             i < nodes.size() - 1;
-             i++) {
+        // ==========================================
+        // NORMAL FLOW
+        // ==========================================
 
-            CFGNode current =
-                    nodes.get(i);
+        for (int i = 0; i < nodes.size() - 1; i++) {
 
-            CFGNode next =
-                    nodes.get(i + 1);
+            CFGNode current = nodes.get(i);
+            CFGNode next = nodes.get(i + 1);
 
-            cfg.addEdge(
+            addEdgeIfNotExists(
+                    cfg,
                     current,
                     next
             );
         }
 
+        // ==========================================
+        // SPECIAL CONTROL FLOW
+        // ==========================================
 
-        // Add special CFG edges
-        for (int i = 0;
-             i < nodes.size();
-             i++) {
+        for (int i = 0; i < nodes.size(); i++) {
 
-            CFGNode current =
-                    nodes.get(i);
+            CFGNode current = nodes.get(i);
 
             String statement =
                     current.getStatement();
 
-
-            // -------------------------
-            // IF BRANCH
-            // -------------------------
+            // ======================================
+            // IF STATEMENT
+            // ======================================
 
             if (statement.startsWith("IF")) {
 
-                // TRUE path
+                // TRUE PATH
                 if (i + 1 < nodes.size()) {
 
-                    cfg.addEdge(
+                    addEdgeIfNotExists(
+                            cfg,
                             current,
                             nodes.get(i + 1)
                     );
                 }
 
-                // FALSE path
+                // FALSE PATH
                 if (i + 2 < nodes.size()) {
 
-                    cfg.addEdge(
+                    addEdgeIfNotExists(
+                            cfg,
                             current,
                             nodes.get(i + 2)
                     );
                 }
             }
 
-
-            // -------------------------
+            // ======================================
             // FOR LOOP
-            // -------------------------
+            // ======================================
 
-            if (statement.startsWith(
-                    "FOR LOOP")) {
+            if (statement.startsWith("FOR LOOP")) {
 
-                // Loop body
+                // ----------------------------------
+                // LOOP BODY
+                // ----------------------------------
+
                 if (i + 1 < nodes.size()) {
 
-                    cfg.addEdge(
+                    addEdgeIfNotExists(
+                            cfg,
                             current,
                             nodes.get(i + 1)
                     );
                 }
 
-                // Back edge
+                // ----------------------------------
+                // LOOP BACK EDGE
+                // ----------------------------------
+
                 if (i + 1 < nodes.size()) {
 
-                    cfg.addEdge(
+                    addEdgeIfNotExists(
+                            cfg,
                             nodes.get(i + 1),
                             current
                     );
                 }
             }
 
-
-            // -------------------------
+            // ======================================
             // WHILE LOOP
-            // -------------------------
+            // ======================================
 
-            if (statement.startsWith(
-                    "WHILE LOOP")) {
+            if (statement.startsWith("WHILE LOOP")) {
 
-                // Loop body
+                // LOOP BODY
                 if (i + 1 < nodes.size()) {
 
-                    cfg.addEdge(
+                    addEdgeIfNotExists(
+                            cfg,
                             current,
                             nodes.get(i + 1)
                     );
                 }
 
-                // Back edge
+                // BACK EDGE
                 if (i + 1 < nodes.size()) {
 
-                    cfg.addEdge(
+                    addEdgeIfNotExists(
+                            cfg,
                             nodes.get(i + 1),
                             current
                     );
@@ -142,7 +153,32 @@ public class CFGBuilder {
             }
         }
 
-
         return cfg;
     }
+
+    // ==========================================
+    // ADD EDGE WITHOUT DUPLICATES
+    // ==========================================
+
+    private void addEdgeIfNotExists(
+            CFG cfg,
+            CFGNode from,
+            CFGNode to) {
+
+        List<CFGNode> existingEdges =
+                cfg.getEdges().get(from);
+
+        if (existingEdges == null) {
+
+            cfg.addEdge(from, to);
+
+            return;
+        }
+
+        if (!existingEdges.contains(to)) {
+
+            cfg.addEdge(from, to);
+        }
+    }
 }
+
