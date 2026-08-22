@@ -600,3 +600,48 @@ footer p {
   }
 
 }
+.analysis-section {
+  margin-top: 30px;
+  padding: 25px;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+.section-description {
+  margin-bottom: 20px;
+  color: #666;
+}
+
+.abstract-state-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.abstract-header,
+.abstract-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  padding: 14px 18px;
+}
+
+.abstract-header {
+  font-weight: bold;
+  background: #f3f4f6;
+}
+
+.abstract-row {
+  border-top: 1px solid #e5e7eb;
+}
+
+.loop-information {
+  margin-top: 20px;
+  padding: 18px;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.loop-information strong {
+  margin-left: 8px;
+}

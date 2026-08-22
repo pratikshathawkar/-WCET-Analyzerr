@@ -43,19 +43,25 @@ function App() {
         .filter((line) => line.trim() !== "").length;
 
       setResult({
-        wcet: data.wcet,
-        lines: lines,
-        complexity:
-          lines > 10
-            ? "High"
-            : lines > 5
-            ? "Medium"
-            : "Low",
-        loopIterations: data.loopIterations ?? 1,
-        operationCost: data.operationCost ?? 0,
-        worstPathCost: data.worstPathCost ?? 1,
-      });
+  wcet: data.wcet,
+  lines: lines,
 
+  complexity:
+    lines > 10
+      ? "High"
+      : lines > 5
+      ? "Medium"
+      : "Low",
+
+  loopIterations: data.loopIterations ?? 1,
+  operationCost: data.operationCost ?? 0,
+  worstPathCost: data.worstPathCost ?? 1,
+
+  // Abstract Interpretation
+  abstractState: data.abstractState ?? [],
+  loopVariable: data.loopVariable ?? "",
+  maximumIterations: data.maximumIterations ?? 0,
+});
       setCfg(data.cfg ?? null);
       setActiveFeature(null);
 
@@ -420,7 +426,62 @@ int main() {
 
         </section>
 
+{/* Abstract State Visualization */}
 
+{result && result.abstractState?.length > 0 && (
+  <section className="analysis-section">
+
+    <h2>🧠 Abstract State Visualization</h2>
+
+    <p className="section-description">
+      Shows the possible value range of variables identified
+      during abstract interpretation.
+    </p>
+
+    <div className="abstract-state-card">
+
+      <div className="abstract-header">
+        <span>Variable</span>
+        <span>Lower Bound</span>
+        <span>Upper Bound</span>
+      </div>
+
+      {result.abstractState.map((item, index) => (
+        <div className="abstract-row" key={index}>
+
+          <strong>{item.variable}</strong>
+
+          <span>{item.lower}</span>
+
+          <span>{item.upper}</span>
+
+        </div>
+      ))}
+
+    </div>
+
+    <div className="loop-information">
+
+      <h3>Loop Information</h3>
+
+      <p>
+        Loop Variable:
+        <strong>
+          {result.loopVariable || "None"}
+        </strong>
+      </p>
+
+      <p>
+        Maximum Iterations:
+        <strong>
+          {result.maximumIterations || 0}
+        </strong>
+      </p>
+
+    </div>
+
+  </section>
+)}
         {/* FEATURES */}
         <section className="features">
 

@@ -7,7 +7,8 @@ import analysis.WCETEstimator;
 import cfg.CFG;
 import cfg.CFGBuilder;
 import cfg.CFGNode;
-
+import analysis.AbstractInterpreter;
+import analysis.AbstractValue;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -15,6 +16,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -149,23 +151,70 @@ public class WCETServer {
 
         String cfgJson =
                 buildCFGJson(cfg);
+                // --------------------------------
+// ABSTRACT STATE ANALYSIS
+// --------------------------------
 
+AbstractInterpreter interpreter =
+        new AbstractInterpreter();
+
+interpreter.analyze(code);
+// --------------------------------
+// BUILD ABSTRACT STATE JSON
+// --------------------------------
+
+StringBuilder abstractState =
+        new StringBuilder();
+
+abstractState.append("[");
+
+boolean firstVariable = true;
+
+for (Map.Entry<String, AbstractValue> entry :
+        interpreter.getVariables().entrySet()) {
+
+    if (!firstVariable) {
+        abstractState.append(",");
+    }
+
+    firstVariable = false;
+
+    abstractState.append("{")
+            .append("\"variable\":\"")
+            .append(entry.getKey())
+            .append("\",")
+            .append("\"lower\":")
+            .append(entry.getValue().getLower())
+            .append(",")
+            .append("\"upper\":")
+            .append(entry.getValue().getUpper())
+            .append("}");
+}
+
+abstractState.append("]");
         // ==============================
         // JSON RESPONSE
         // ==============================
 
         String response =
-                "{"
-                + "\"status\":\"success\","
-                + "\"message\":\"Code analyzed successfully\","
-                + "\"wcet\":" + wcet + ","
-                + "\"loopIterations\":" + loopIterations + ","
-                + "\"operationCost\":" + operationCost + ","
-                + "\"worstPathCost\":" + worstPathCost + ","
-                + "\"lines\":" + lines + ","
-                + "\"cfg\":" + cfgJson
-                + "}";
-
+       
+        "{"
+        + "\"status\":\"success\","
+        + "\"message\":\"Code analyzed successfully\","
+        + "\"wcet\":" + wcet + ","
+        + "\"loopIterations\":" + loopIterations + ","
+        + "\"operationCost\":" + operationCost + ","
+        + "\"worstPathCost\":" + worstPathCost + ","
+        + "\"cfg\":" + cfgJson + ","
+        + "\"loopVariable\":\""
+        + escapeJson(interpreter.getLoopVariable())
+        + "\","
+        + "\"maximumIterations\":"
+        + interpreter.getMaximumIterations()
+        + ","
+        + "\"abstractState\":"
+        + abstractState
+        + "}";
         sendResponse(
                 exchange,
                 200,
