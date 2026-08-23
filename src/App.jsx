@@ -1,24 +1,42 @@
 import { useState, useRef } from "react";
 import "./App.css";
+import CFGVisualization from "./CFGVisualization";
+import AbstractStateVisualization from "./AbstractStateVisualization";
 
 function App() {
   const [code, setCode] = useState("");
   const [result, setResult] = useState(null);
   const [cfg, setCfg] = useState(null);
+
   const [activeFeature, setActiveFeature] = useState(null);
   const [highlighted, setHighlighted] = useState(null);
+
+  const [loading, setLoading] = useState(false);
+  const [backendStatus, setBackendStatus] = useState("ready");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const codeCardRef = useRef(null);
   const wcetRef = useRef(null);
   const linesRef = useRef(null);
   const complexityRef = useRef(null);
   const statusRef = useRef(null);
+  const cfgRef = useRef(null);
+  const abstractRef = useRef(null);
+  const featuresRef = useRef(null);
+
+  /* =========================================================
+     ANALYZE CODE
+  ========================================================= */
 
   const analyzeCode = async () => {
     if (!code.trim()) {
-      alert("Please enter some code first!");
+      setErrorMessage("Please enter some C/C++ source code first.");
       return;
     }
+
+    setLoading(true);
+    setBackendStatus("analyzing");
+    setErrorMessage("");
 
     try {
       const response = await fetch(
@@ -33,53 +51,147 @@ function App() {
       );
 
       if (!response.ok) {
-        throw new Error("Backend analysis failed");
+        throw new Error(
+          `Backend returned status ${response.status}`
+        );
       }
 
       const data = await response.json();
 
+      /* =====================================================
+         BASIC SOURCE CODE INFORMATION
+      ===================================================== */
+
       const lines = code
         .split("\n")
-        .filter((line) => line.trim() !== "").length;
+        .filter((line) => line.trim() !== "")
+        .length;
 
-      setResult({
-  wcet: data.wcet,
-  lines: lines,
+      const complexity =
+        lines > 10
+          ? "High"
+          : lines > 5
+          ? "Medium"
+          : "Low";
 
-  complexity:
-    lines > 10
-      ? "High"
-      : lines > 5
-      ? "Medium"
-      : "Low",
+      /* =====================================================
+         NORMALIZE ABSTRACT STATE
 
-  loopIterations: data.loopIterations ?? 1,
-  operationCost: data.operationCost ?? 0,
-  worstPathCost: data.worstPathCost ?? 1,
+         Supports both:
+         {
+           variable: "i",
+           lower: 0,
+           upper: 10
+         }
 
-  // Abstract Interpretation
-  abstractState: data.abstractState ?? [],
-  loopVariable: data.loopVariable ?? "",
-  maximumIterations: data.maximumIterations ?? 0,
-});
+         and:
+         {
+           name: "i",
+           lower: 0,
+           upper: 10
+         }
+      ===================================================== */
+
+      const normalizedAbstractState = (
+        data.abstractState || []
+      ).map((item) => ({
+        name: item.name ?? item.variable ?? "unknown",
+        variable: item.variable ?? item.name ?? "unknown",
+        lower:
+          item.lower === null || item.lower === undefined
+            ? null
+            : Number(item.lower),
+        upper:
+          item.upper === null || item.upper === undefined
+            ? null
+            : Number(item.upper),
+      }));
+
+      /* =====================================================
+         SET RESULT
+      ===================================================== */
+
+      const analysisResult = {
+        wcet: data.wcet ?? 0,
+
+        lines,
+
+        complexity,
+
+        loopIterations:
+          data.loopIterations ?? 1,
+
+        operationCost:
+          data.operationCost ?? 0,
+
+        worstPathCost:
+          data.worstPathCost ?? 1,
+
+        abstractState:
+          normalizedAbstractState,
+
+        loopVariable:
+          data.loopVariable ?? "",
+
+        maximumIterations:
+          data.maximumIterations ?? 0,
+      };
+
+      setResult(analysisResult);
+
+      /* =====================================================
+         CFG
+      ===================================================== */
+
       setCfg(data.cfg ?? null);
+
       setActiveFeature(null);
+      setHighlighted(null);
+      setBackendStatus("ready");
 
+      /* =====================================================
+         SCROLL TO CFG
+      ===================================================== */
+
+      setTimeout(() => {
+        cfgRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }, 400);
     } catch (error) {
-      console.error(error);
+      console.error("WCET Analysis Error:", error);
 
-      alert(
-        "Unable to connect to WCET backend. Make sure the Java server is running."
+      setBackendStatus("error");
+
+      setErrorMessage(
+        "Unable to connect to WCET backend. Make sure WCETServer.java is running on port 8080."
       );
+
+      setResult(null);
+      setCfg(null);
+    } finally {
+      setLoading(false);
     }
   };
+
+  /* =========================================================
+     CLEAR
+  ========================================================= */
 
   const clearAll = () => {
     setCode("");
     setResult(null);
     setCfg(null);
     setActiveFeature(null);
+    setHighlighted(null);
+    setErrorMessage("");
+    setBackendStatus("ready");
   };
+
+  /* =========================================================
+     SCROLL TO RESULT
+  ========================================================= */
 
   const scrollToBox = (ref, key) => {
     if (!result) {
@@ -88,8 +200,8 @@ function App() {
         block: "center",
       });
 
-      alert(
-        "Run an analysis first, then click a feature to see that result."
+      setErrorMessage(
+        'Run the analysis first, then click a feature.'
       );
 
       return;
@@ -107,107 +219,317 @@ function App() {
     }, 1200);
   };
 
+  /* =========================================================
+     FEATURE CLICK
+  ========================================================= */
+
+  const handleFeatureClick = (feature) => {
+    setActiveFeature(
+      activeFeature === feature ? null : feature
+    );
+
+    if (!result) {
+      setTimeout(() => {
+        codeCardRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }, 100);
+    }
+  };
+
+  /* =========================================================
+     NODE TYPE HELPERS
+  ========================================================= */
+
+  const getNodeType = (statement = "") => {
+    const text = statement.toUpperCase();
+
+    if (
+      text.includes("FOR LOOP") ||
+      text.includes("WHILE LOOP") ||
+      text.includes("DO WHILE")
+    ) {
+      return "loop";
+    }
+
+    if (
+      text.includes("IF") ||
+      text.includes("ELSE") ||
+      text.includes("SWITCH")
+    ) {
+      return "decision";
+    }
+
+    return "statement";
+  };
+
+  const getNodeIcon = (type) => {
+    if (type === "loop") return "🔄";
+    if (type === "decision") return "🔀";
+    return "▸";
+  };
+
+  const getNodeLabel = (type) => {
+    if (type === "loop") return "LOOP";
+    if (type === "decision") return "DECISION";
+    return "STATEMENT";
+  };
+
+  /* =========================================================
+     BACKEND STATUS
+  ========================================================= */
+
+  const getStatusText = () => {
+    if (backendStatus === "analyzing") {
+      return "Analyzing...";
+    }
+
+    if (backendStatus === "error") {
+      return "Backend Offline";
+    }
+
+    return "System Ready";
+  };
+
   return (
     <div className="app">
 
-      {/* HEADER */}
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
+
       <header className="header">
-        <div>
-          <h1>⚡ WCET Analyzer</h1>
-          <p>
-            Worst-Case Execution Time Analysis Tool
-          </p>
+
+        <div className="header-content">
+
+          <div>
+            <h1>⚡ WCET Analyzer</h1>
+
+            <p>
+              Worst-Case Execution Time Analysis Tool
+            </p>
+          </div>
+
+          <div
+            className={`status status-${backendStatus}`}
+          >
+            <span className="dot"></span>
+
+            {getStatusText()}
+          </div>
+
         </div>
 
-        <div className="status">
-          <span className="dot"></span>
-          System Ready
-        </div>
       </header>
 
+      {/* =====================================================
+          MAIN
+      ===================================================== */}
 
-      {/* MAIN */}
       <main className="container">
 
-        {/* INTRO */}
+        {/* ===================================================
+            INTRO
+        =================================================== */}
+
         <section className="intro">
-          <h2>Analyze Your Program</h2>
+
+          <div className="intro-badge">
+            STATIC ANALYSIS • REAL-TIME SYSTEMS
+          </div>
+
+          <h2>
+            Analyze Your Program
+          </h2>
 
           <p>
-            Enter your program code below to estimate
-            its Worst-Case Execution Time (WCET).
+            Estimate the Worst-Case Execution Time,
+            analyze control flow and inspect abstract
+            program states.
           </p>
+
         </section>
 
+        {/* ===================================================
+            ERROR MESSAGE
+        =================================================== */}
 
-        {/* WORKSPACE */}
+        {errorMessage && (
+
+          <div className="error-banner">
+
+            <span>⚠️</span>
+
+            <div>
+              <strong>Analysis Error</strong>
+
+              <p>
+                {errorMessage}
+              </p>
+            </div>
+
+            <button
+              onClick={() => setErrorMessage("")}
+            >
+              ×
+            </button>
+
+          </div>
+
+        )}
+
+        {/* ===================================================
+            WORKSPACE
+        =================================================== */}
+
         <div className="workspace">
 
-          {/* SOURCE CODE */}
+          {/* =================================================
+              SOURCE CODE
+          ================================================= */}
+
           <section
             className="card code-card"
             ref={codeCardRef}
           >
+
             <div className="card-header">
-              <h3>📝 Source Code</h3>
-              <span>Input</span>
+
+              <div>
+                <h3>📝 Source Code</h3>
+
+                <p className="card-description">
+                  Enter C/C++ code for WCET analysis
+                </p>
+              </div>
+
+              <span>
+                INPUT
+              </span>
+
             </div>
 
             <textarea
               value={code}
-              onChange={(e) =>
-                setCode(e.target.value)
-              }
-              placeholder={`Enter your code here...
+              onChange={(e) => {
+                setCode(e.target.value);
+                setErrorMessage("");
+              }}
+              placeholder={`Enter your C/C++ code here...
 
 Example:
 
 int main() {
-    int sum = 0;
 
-    for(int i = 0; i < 10; i++) {
-        sum = sum + i;
+    int arr[5] = {
+        64, 34, 25, 12, 22
+    };
 
-        if(sum > 20) {
-            sum = sum * 2;
+    int i, j, temp;
+
+    for (i = 0; i < 5 - 1; i++) {
+
+        for (j = 0;
+             j < 5 - i - 1;
+             j++) {
+
+            if (arr[j] > arr[j + 1]) {
+
+                temp = arr[j];
+                arr[j] = arr[j + 1];
+                arr[j + 1] = temp;
+            }
         }
     }
 
-    return sum;
+    return 0;
 }`}
             />
+
+            {/* CODE INFORMATION */}
+
+            <div className="code-info">
+
+              <span>
+                💡 Supports loops, decisions and operations
+              </span>
+
+              <span>
+                Lines:{" "}
+                {
+                  code
+                    .split("\n")
+                    .filter(
+                      (line) =>
+                        line.trim() !== ""
+                    ).length
+                }
+              </span>
+
+            </div>
+
+            {/* BUTTONS */}
 
             <div className="buttons">
 
               <button
                 className="analyze-btn"
                 onClick={analyzeCode}
+                disabled={loading}
               >
-                ▶ Analyze WCET
+
+                {loading ? (
+                  <>
+                    <span className="spinner"></span>
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    ▶ Analyze WCET
+                  </>
+                )}
+
               </button>
 
               <button
                 className="clear-btn"
                 onClick={clearAll}
+                disabled={loading}
               >
                 Clear
               </button>
 
             </div>
+
           </section>
 
+          {/* =================================================
+              RESULT
+          ================================================= */}
 
-          {/* RESULT */}
           <section className="card result-card">
 
             <div className="card-header">
-              <h3>📊 Analysis Result</h3>
-              <span>Output</span>
+
+              <div>
+                <h3>📊 Analysis Result</h3>
+
+                <p className="card-description">
+                  Worst-case execution analysis
+                </p>
+              </div>
+
+              <span>
+                OUTPUT
+              </span>
+
             </div>
 
             {!result ? (
 
               <div className="empty">
+
                 <div className="empty-icon">
                   ⏱️
                 </div>
@@ -218,15 +540,24 @@ int main() {
 
                 <p>
                   Enter your source code and click
-                  <b> "Analyze WCET"</b>.
+                  <b> Analyze WCET</b>.
                 </p>
+
+                <div className="empty-hint">
+                  Your WCET, CFG and abstract state
+                  will appear here.
+                </div>
+
               </div>
 
             ) : (
 
               <div className="results">
 
-                {/* WCET */}
+                {/* =========================================
+                    WCET
+                ========================================= */}
+
                 <div
                   className={`wcet-result ${
                     highlighted === "wcet"
@@ -236,12 +567,13 @@ int main() {
                   ref={wcetRef}
                 >
 
-                  <p>
-                    Estimated WCET
-                  </p>
+                  <div className="result-label">
+                    ESTIMATED WCET
+                  </div>
 
                   <h1>
-                    {result.wcet} μs
+                    {result.wcet}
+                    <small> μs</small>
                   </h1>
 
                   <span>
@@ -250,8 +582,10 @@ int main() {
 
                 </div>
 
+                {/* =========================================
+                    RESULT GRID
+                ========================================= */}
 
-                {/* RESULT GRID */}
                 <div className="result-grid">
 
                   <div
@@ -261,16 +595,23 @@ int main() {
                         : ""
                     }`}
                     ref={linesRef}
+                    onClick={() =>
+                      scrollToBox(
+                        linesRef,
+                        "lines"
+                      )
+                    }
                   >
+
                     <span>
-                      Lines of Code
+                      📄 Lines of Code
                     </span>
 
                     <strong>
                       {result.lines}
                     </strong>
-                  </div>
 
+                  </div>
 
                   <div
                     className={`result-box ${
@@ -279,49 +620,59 @@ int main() {
                         : ""
                     }`}
                     ref={complexityRef}
+                    onClick={() =>
+                      scrollToBox(
+                        complexityRef,
+                        "complexity"
+                      )
+                    }
                   >
+
                     <span>
-                      Complexity
+                      📈 Complexity
                     </span>
 
                     <strong>
                       {result.complexity}
                     </strong>
+
                   </div>
 
-
                   <div className="result-box">
+
                     <span>
-                      Loop Bound
+                      🔄 Loop Bound
                     </span>
 
                     <strong>
                       {result.loopIterations}
                     </strong>
+
                   </div>
 
-
                   <div className="result-box">
+
                     <span>
-                      HLS Operation Cost
+                      ⚙️ Operation Cost
                     </span>
 
                     <strong>
                       {result.operationCost}
                     </strong>
+
                   </div>
 
-
                   <div className="result-box">
+
                     <span>
-                      Worst Path Cost
+                      🛣️ Worst Path Cost
                     </span>
 
                     <strong>
                       {result.worstPathCost}
                     </strong>
-                  </div>
 
+                  </div>
 
                   <div
                     className={`result-box ${
@@ -331,13 +682,15 @@ int main() {
                     }`}
                     ref={statusRef}
                   >
+
                     <span>
-                      Status
+                      ✓ Analysis Status
                     </span>
 
                     <strong className="safe">
-                      Analyzed
+                      Completed
                     </strong>
+
                   </div>
 
                 </div>
@@ -349,14 +702,72 @@ int main() {
 
         </div>
 
+        {/* ===================================================
+            QUICK SUMMARY
+        =================================================== */}
 
-        {/* CFG */}
-        <section className="card cfg-card">
+        {result && (
 
-          <div className="card-header">
-            <h3>🔀 Control Flow Graph</h3>
-            <span>CFG Visualization</span>
-          </div>
+          <section className="quick-summary">
+
+            <div className="summary-item">
+
+              <span>WCET</span>
+
+              <strong>
+                {result.wcet} μs
+              </strong>
+
+            </div>
+
+            <div className="summary-divider"></div>
+
+            <div className="summary-item">
+
+              <span>LOOP BOUND</span>
+
+              <strong>
+                {result.loopIterations}
+              </strong>
+
+            </div>
+
+            <div className="summary-divider"></div>
+
+            <div className="summary-item">
+
+              <span>COMPLEXITY</span>
+
+              <strong>
+                {result.complexity}
+              </strong>
+
+            </div>
+
+            <div className="summary-divider"></div>
+
+            <div className="summary-item">
+
+              <span>CFG</span>
+
+              <strong>
+                {cfg ? "Generated" : "Unavailable"}
+              </strong>
+
+            </div>
+
+          </section>
+
+        )}
+
+        {/* ===================================================
+            CFG
+        =================================================== */}
+
+        <section
+          className="card cfg-card"
+          ref={cfgRef}
+        >
 
           {!cfg ? (
 
@@ -379,128 +790,141 @@ int main() {
 
           ) : (
 
-            <div className="cfg-container">
-
-              {cfg.nodes?.map((node) => (
-
-                <div
-                  key={node.id}
-                  className="cfg-wrapper"
-                >
-
-                  <div
-                    className={
-                      node.statement?.includes(
-                        "FOR LOOP"
-                      )
-                        ? "cfg-node loop-node"
-                        : node.statement?.includes(
-                            "IF"
-                          )
-                        ? "cfg-node if-node"
-                        : "cfg-node"
-                    }
-                  >
-
-                    <div className="cfg-node-number">
-                      Node {node.id}
-                    </div>
-
-                    <div className="cfg-statement">
-                      {node.statement}
-                    </div>
-
-                  </div>
-
-                  <div className="cfg-arrow">
-                    ↓
-                  </div>
-
-                </div>
-
-              ))}
-
-            </div>
+            <CFGVisualization cfg={cfg} />
 
           )}
 
         </section>
 
-{/* Abstract State Visualization */}
+        {/* ===================================================
+            ABSTRACT INTERPRETATION
+        =================================================== */}
 
-{result && result.abstractState?.length > 0 && (
-  <section className="analysis-section">
+        {result && (
 
-    <h2>🧠 Abstract State Visualization</h2>
+          <section
+            className="analysis-section"
+            ref={abstractRef}
+          >
 
-    <p className="section-description">
-      Shows the possible value range of variables identified
-      during abstract interpretation.
-    </p>
+            <AbstractStateVisualization
+              abstractState={
+                result.abstractState
+              }
+            />
 
-    <div className="abstract-state-card">
+            {/* LOOP INFORMATION */}
 
-      <div className="abstract-header">
-        <span>Variable</span>
-        <span>Lower Bound</span>
-        <span>Upper Bound</span>
-      </div>
+            <div className="loop-information">
 
-      {result.abstractState.map((item, index) => (
-        <div className="abstract-row" key={index}>
+              <div className="loop-information-header">
 
-          <strong>{item.variable}</strong>
+                <div>
 
-          <span>{item.lower}</span>
+                  <h3>
+                    🔄 Loop Analysis
+                  </h3>
 
-          <span>{item.upper}</span>
+                  <p>
+                    Information used for WCET
+                    bound estimation.
+                  </p>
 
-        </div>
-      ))}
+                </div>
 
-    </div>
+                <span className="analysis-badge">
+                  STATIC ANALYSIS
+                </span>
 
-    <div className="loop-information">
+              </div>
 
-      <h3>Loop Information</h3>
+              <div className="loop-info-grid">
 
-      <p>
-        Loop Variable:
-        <strong>
-          {result.loopVariable || "None"}
-        </strong>
-      </p>
+                <div>
 
-      <p>
-        Maximum Iterations:
-        <strong>
-          {result.maximumIterations || 0}
-        </strong>
-      </p>
+                  <span>
+                    Loop Variable
+                  </span>
 
-    </div>
+                  <strong>
+                    {result.loopVariable ||
+                      "Not detected"}
+                  </strong>
 
-  </section>
-)}
-        {/* FEATURES */}
-        <section className="features">
+                </div>
 
-          <h2>
-            WCET Analysis Features
-          </h2>
+                <div>
 
+                  <span>
+                    Maximum Iterations
+                  </span>
+
+                  <strong>
+                    {result.maximumIterations ||
+                      result.loopIterations ||
+                      0}
+                  </strong>
+
+                </div>
+
+                <div>
+
+                  <span>
+                    WCET Contribution
+                  </span>
+
+                  <strong>
+                    {result.worstPathCost} μs
+                  </strong>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </section>
+
+        )}
+
+        {/* ===================================================
+            FEATURES
+        =================================================== */}
+
+        <section
+          className="features"
+          ref={featuresRef}
+        >
+
+          <div className="section-heading">
+
+            <span className="section-tag">
+              ANALYSIS MODULES
+            </span>
+
+            <h2>
+              WCET Analysis Features
+            </h2>
+
+            <p>
+              Explore different parts of the
+              static analysis process.
+            </p>
+
+          </div>
 
           <div className="feature-grid">
 
-            {/* EXECUTION TIME */}
-            <div
+            {/* EXECUTION */}
+
+            <button
               className={`feature ${
                 activeFeature === "execution"
                   ? "feature-active"
                   : ""
               }`}
               onClick={() =>
-                setActiveFeature("execution")
+                handleFeatureClick("execution")
               }
             >
 
@@ -513,22 +937,26 @@ int main() {
               </h3>
 
               <p>
-                Estimate the maximum execution
-                time of a program.
+                Estimate maximum execution
+                time using WCET analysis.
               </p>
 
-            </div>
+              <span className="feature-arrow">
+                →
+              </span>
 
+            </button>
 
-            {/* CODE ANALYSIS */}
-            <div
+            {/* CODE */}
+
+            <button
               className={`feature ${
                 activeFeature === "code"
                   ? "feature-active"
                   : ""
               }`}
               onClick={() =>
-                setActiveFeature("code")
+                handleFeatureClick("code")
               }
             >
 
@@ -541,22 +969,26 @@ int main() {
               </h3>
 
               <p>
-                Analyze source code and identify
-                important execution paths.
+                Identify loops, operations
+                and execution paths.
               </p>
 
-            </div>
+              <span className="feature-arrow">
+                →
+              </span>
 
+            </button>
 
             {/* COMPLEXITY */}
-            <div
+
+            <button
               className={`feature ${
                 activeFeature === "complexity"
                   ? "feature-active"
                   : ""
               }`}
               onClick={() =>
-                setActiveFeature("complexity")
+                handleFeatureClick("complexity")
               }
             >
 
@@ -569,22 +1001,26 @@ int main() {
               </h3>
 
               <p>
-                Display basic information about
-                program complexity.
+                Understand program complexity
+                and loop impact.
               </p>
 
-            </div>
+              <span className="feature-arrow">
+                →
+              </span>
 
+            </button>
 
             {/* REPORT */}
-            <div
+
+            <button
               className={`feature ${
                 activeFeature === "report"
                   ? "feature-active"
                   : ""
               }`}
               onClick={() =>
-                setActiveFeature("report")
+                handleFeatureClick("report")
               }
             >
 
@@ -597,16 +1033,21 @@ int main() {
               </h3>
 
               <p>
-                Present WCET analysis results in
-                an easy-to-understand format.
+                View a complete summary of
+                the WCET analysis.
               </p>
 
-            </div>
+              <span className="feature-arrow">
+                →
+              </span>
+
+            </button>
 
           </div>
 
-
-          {/* FEATURE DETAILS */}
+          {/* =================================================
+              FEATURE DETAILS
+          ================================================= */}
 
           {activeFeature && !result && (
 
@@ -625,231 +1066,22 @@ int main() {
 
           )}
 
-
-          {/* EXECUTION TIME */}
+          {/* =================================================
+              EXECUTION TIME
+          ================================================= */}
 
           {activeFeature === "execution" &&
             result && (
 
-              <div className="feature-details">
+            <div className="feature-details">
 
-                <h3>
-                  ⏱️ Execution Time Analysis
-                </h3>
+              <h3>
+                ⏱️ Execution Time Analysis
+              </h3>
 
-                <div className="detail-grid">
+              <div className="detail-grid">
 
-                  <div>
-                    <span>
-                      Estimated WCET
-                    </span>
-
-                    <strong>
-                      {result.wcet} μs
-                    </strong>
-                  </div>
-
-                  <div>
-                    <span>
-                      Loop Bound
-                    </span>
-
-                    <strong>
-                      {result.loopIterations}
-                    </strong>
-                  </div>
-
-                  <div>
-                    <span>
-                      Operation Cost
-                    </span>
-
-                    <strong>
-                      {result.operationCost}
-                    </strong>
-                  </div>
-
-                  <div>
-                    <span>
-                      Worst Path Cost
-                    </span>
-
-                    <strong>
-                      {result.worstPathCost}
-                    </strong>
-                  </div>
-
-                </div>
-
-                <p className="detail-description">
-                  WCET represents the estimated
-                  maximum execution time of the
-                  analyzed program. The calculation
-                  considers loop iterations,
-                  operation cost and worst-path cost.
-                </p>
-
-              </div>
-            )}
-
-
-          {/* CODE ANALYSIS */}
-
-          {activeFeature === "code" &&
-            result && (
-
-              <div className="feature-details">
-
-                <h3>
-                  🔍 Source Code Analysis
-                </h3>
-
-                <div className="detail-grid">
-
-                  <div>
-                    <span>
-                      Lines of Code
-                    </span>
-
-                    <strong>
-                      {result.lines}
-                    </strong>
-                  </div>
-
-                  <div>
-                    <span>
-                      Loop Bound
-                    </span>
-
-                    <strong>
-                      {result.loopIterations}
-                    </strong>
-                  </div>
-
-                  <div>
-                    <span>
-                      HLS Operation Cost
-                    </span>
-
-                    <strong>
-                      {result.operationCost}
-                    </strong>
-                  </div>
-
-                  <div>
-                    <span>
-                      Worst Path Cost
-                    </span>
-
-                    <strong>
-                      {result.worstPathCost}
-                    </strong>
-                  </div>
-
-                </div>
-
-                <p className="detail-description">
-                  The analyzer examines the source
-                  code and identifies loops,
-                  operations and important execution
-                  paths.
-                </p>
-
-              </div>
-            )}
-
-
-          {/* COMPLEXITY */}
-
-          {activeFeature === "complexity" &&
-            result && (
-
-              <div className="feature-details">
-
-                <h3>
-                  📈 Complexity Analysis
-                </h3>
-
-                <div className="complexity-display">
-
-                  <span>
-                    Complexity Level
-                  </span>
-
-                  <strong>
-                    {result.complexity}
-                  </strong>
-
-                </div>
-
-                <div className="detail-grid">
-
-                  <div>
-                    <span>
-                      Lines of Code
-                    </span>
-
-                    <strong>
-                      {result.lines}
-                    </strong>
-                  </div>
-
-                  <div>
-                    <span>
-                      Loop Bound
-                    </span>
-
-                    <strong>
-                      {result.loopIterations}
-                    </strong>
-                  </div>
-
-                </div>
-
-                <p className="detail-description">
-
-                  The analyzer provides a basic
-                  complexity classification based
-                  on the analyzed program.
-
-                  <br />
-                  <br />
-
-                  <b>Problem Detection:</b>
-
-                  {result.loopIterations > 1
-                    ? " A loop was detected. A high loop bound may increase execution time."
-                    : " No significant loop bound was detected."
-                  }
-
-                </p>
-
-              </div>
-            )}
-
-
-          {/* REPORT */}
-
-          {activeFeature === "report" &&
-            result && (
-
-              <div className="feature-details report-details">
-
-                <h3>
-                  📊 WCET Analysis Report
-                </h3>
-
-                <div className="report-row">
-                  <span>
-                    Program Status
-                  </span>
-
-                  <strong>
-                    Analyzed
-                  </strong>
-                </div>
-
-                <div className="report-row">
+                <div>
                   <span>
                     Estimated WCET
                   </span>
@@ -859,27 +1091,7 @@ int main() {
                   </strong>
                 </div>
 
-                <div className="report-row">
-                  <span>
-                    Lines of Code
-                  </span>
-
-                  <strong>
-                    {result.lines}
-                  </strong>
-                </div>
-
-                <div className="report-row">
-                  <span>
-                    Complexity
-                  </span>
-
-                  <strong>
-                    {result.complexity}
-                  </strong>
-                </div>
-
-                <div className="report-row">
+                <div>
                   <span>
                     Loop Bound
                   </span>
@@ -889,9 +1101,9 @@ int main() {
                   </strong>
                 </div>
 
-                <div className="report-row">
+                <div>
                   <span>
-                    HLS Operation Cost
+                    Operation Cost
                   </span>
 
                   <strong>
@@ -899,7 +1111,7 @@ int main() {
                   </strong>
                 </div>
 
-                <div className="report-row">
+                <div>
                   <span>
                     Worst Path Cost
                   </span>
@@ -909,35 +1121,274 @@ int main() {
                   </strong>
                 </div>
 
-                <div className="report-conclusion">
+              </div>
 
-                  <h4>
-                    Conclusion
-                  </h4>
+              <p className="detail-description">
+                The WCET represents the estimated
+                maximum execution time of the program.
+                Loop bounds, operation costs and the
+                worst execution path contribute to
+                this estimate.
+              </p>
 
-                  <p>
-                    The program was successfully
-                    analyzed. The detected loops,
-                    operations and execution paths
-                    contribute to the estimated
-                    Worst-Case Execution Time.
-                  </p>
+            </div>
 
+          )}
+
+          {/* =================================================
+              CODE ANALYSIS
+          ================================================= */}
+
+          {activeFeature === "code" &&
+            result && (
+
+            <div className="feature-details">
+
+              <h3>
+                🔍 Source Code Analysis
+              </h3>
+
+              <div className="detail-grid">
+
+                <div>
+                  <span>
+                    Lines of Code
+                  </span>
+
+                  <strong>
+                    {result.lines}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>
+                    Loop Bound
+                  </span>
+
+                  <strong>
+                    {result.loopIterations}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>
+                    Operation Cost
+                  </span>
+
+                  <strong>
+                    {result.operationCost}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>
+                    Worst Path Cost
+                  </span>
+
+                  <strong>
+                    {result.worstPathCost}
+                  </strong>
                 </div>
 
               </div>
-            )}
+
+              <p className="detail-description">
+                The analyzer examines the source program
+                and identifies important execution
+                characteristics such as loops,
+                operations and execution paths.
+              </p>
+
+            </div>
+
+          )}
+
+          {/* =================================================
+              COMPLEXITY
+          ================================================= */}
+
+          {activeFeature === "complexity" &&
+            result && (
+
+            <div className="feature-details">
+
+              <h3>
+                📈 Complexity Analysis
+              </h3>
+
+              <div className="complexity-display">
+
+                <span>
+                  Complexity Level
+                </span>
+
+                <strong>
+                  {result.complexity}
+                </strong>
+
+              </div>
+
+              <div className="detail-grid">
+
+                <div>
+                  <span>
+                    Lines of Code
+                  </span>
+
+                  <strong>
+                    {result.lines}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>
+                    Loop Bound
+                  </span>
+
+                  <strong>
+                    {result.loopIterations}
+                  </strong>
+                </div>
+
+              </div>
+
+              <p className="detail-description">
+
+                Complexity provides a high-level
+                indication of the program's analysis
+                difficulty.
+
+                <br />
+                <br />
+
+                <b>Problem Detection:</b>
+
+                {result.loopIterations > 1
+                  ? " A loop was detected. A larger loop bound can significantly increase WCET."
+                  : " No significant loop bound was detected."
+                }
+
+              </p>
+
+            </div>
+
+          )}
+
+          {/* =================================================
+              REPORT
+          ================================================= */}
+
+          {activeFeature === "report" &&
+            result && (
+
+            <div className="feature-details report-details">
+
+              <h3>
+                📊 WCET Analysis Report
+              </h3>
+
+              <div className="report-row">
+                <span>
+                  Program Status
+                </span>
+
+                <strong className="safe">
+                  ✓ Analyzed
+                </strong>
+              </div>
+
+              <div className="report-row">
+                <span>
+                  Estimated WCET
+                </span>
+
+                <strong>
+                  {result.wcet} μs
+                </strong>
+              </div>
+
+              <div className="report-row">
+                <span>
+                  Lines of Code
+                </span>
+
+                <strong>
+                  {result.lines}
+                </strong>
+              </div>
+
+              <div className="report-row">
+                <span>
+                  Complexity
+                </span>
+
+                <strong>
+                  {result.complexity}
+                </strong>
+              </div>
+
+              <div className="report-row">
+                <span>
+                  Loop Bound
+                </span>
+
+                <strong>
+                  {result.loopIterations}
+                </strong>
+              </div>
+
+              <div className="report-row">
+                <span>
+                  Operation Cost
+                </span>
+
+                <strong>
+                  {result.operationCost}
+                </strong>
+              </div>
+
+              <div className="report-row">
+                <span>
+                  Worst Path Cost
+                </span>
+
+                <strong>
+                  {result.worstPathCost}
+                </strong>
+              </div>
+
+              <div className="report-conclusion">
+
+                <h4>
+                  🎯 Conclusion
+                </h4>
+
+                <p>
+                  The program was successfully analyzed.
+                  The WCET estimate is based on the
+                  detected operations, loop bounds and
+                  worst execution path.
+                </p>
+
+              </div>
+
+            </div>
+
+          )}
 
         </section>
 
       </main>
 
+      {/* =====================================================
+          FOOTER
+      ===================================================== */}
 
-      {/* FOOTER */}
       <footer>
 
         <p>
-          WCET Analyzer © 2026 |
+          ⚡ WCET Analyzer © 2026
+          <span> | </span>
           Real-Time Systems Analysis
         </p>
 
