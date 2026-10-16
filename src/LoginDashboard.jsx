@@ -33,7 +33,7 @@ function LoginDashboard({ onLogin, onCreateAccount }) {
 
     try {
       const response = await fetch(
-        "http://localhost:8080/api/login",
+        "https://wcet-analyzerr.onrender.com/api/login",
         {
           method: "POST",
           headers: {
@@ -114,7 +114,7 @@ function LoginDashboard({ onLogin, onCreateAccount }) {
 
     try {
       const response = await fetch(
-        "http://localhost:8080/api/signup",
+        "https://wcet-analyzerr.onrender.com/api/signup",
         {
           method: "POST",
           headers: {
