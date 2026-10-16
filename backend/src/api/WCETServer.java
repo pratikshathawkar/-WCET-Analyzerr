@@ -33,8 +33,10 @@ public class WCETServer {
 
         HttpServer server =
                 HttpServer.create(
-                        new InetSocketAddress(8080),
-                        0
+                       
+                        new InetSocketAddress(
+    Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"))
+
                 );
 
         // WCET Analyzer API
