@@ -31,13 +31,15 @@ public class WCETServer {
 
     public static void main(String[] args) throws Exception {
 
-        HttpServer server =
-                HttpServer.create(
-                       
-                        new InetSocketAddress(
-    Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"))
-
-                );
+    HttpServer server =
+        HttpServer.create(
+                new InetSocketAddress(
+                        Integer.parseInt(
+                                System.getenv().getOrDefault("PORT", "8080")
+                        )
+                ),
+                0
+        );
 
         // WCET Analyzer API
         server.createContext(
