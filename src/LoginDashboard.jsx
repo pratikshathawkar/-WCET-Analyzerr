@@ -8,7 +8,11 @@ function LoginDashboard({ onLogin, onCreateAccount }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isCreateAccount, setIsCreateAccount] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
+  // Login existing user
   const handleLogin = async (e) => {
     e.preventDefault();
     setErrorMessage("");
@@ -37,41 +41,40 @@ function LoginDashboard({ onLogin, onCreateAccount }) {
           },
           body: JSON.stringify({
             email: username.trim(),
-            password: password,
+            password,
           }),
         }
       );
 
       const data = await response.json().catch(() => ({}));
 
-      console.log("Login HTTP status:", response.status);
-      console.log("Login response:", data);
-
       if (!response.ok || data.success !== true) {
         setErrorMessage(
-          data.message || "Login failed. Check your email and password."
+          data.message ||
+            "Login failed. Check your email and password."
         );
         return;
       }
 
-      const user =
-        data.user || { email: username.trim() };
+      const user = data.user || {
+        email: username.trim(),
+      };
 
-      // Save the authenticated user.
       localStorage.setItem("wcetUser", JSON.stringify(user));
 
-      // Notify the parent component to open the analyzer.
       try {
         await onLogin(user);
       } catch (callbackError) {
         console.error("Login callback error:", callbackError);
         localStorage.removeItem("wcetUser");
+
         setErrorMessage(
           "Login succeeded, but the dashboard could not open. Please try again."
         );
       }
     } catch (error) {
       console.error("Login error:", error);
+
       setErrorMessage(
         "Unable to connect to WCET backend. Make sure the backend is running on port 8080."
       );
@@ -80,14 +83,96 @@ function LoginDashboard({ onLogin, onCreateAccount }) {
     }
   };
 
-  const handleCreateAccount = () => {
-    if (typeof onCreateAccount === "function") {
-      onCreateAccount();
-    } else {
-      setErrorMessage(
-        "Create Account is not configured yet."
-      );
+  // Create a new user account
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    setErrorMessage("");
+
+    if (
+      !fullName.trim() ||
+      !username.trim() ||
+      !password ||
+      !confirmPassword
+    ) {
+      setErrorMessage("Please fill in all fields.");
+      return;
     }
+
+    if (password.length < 8) {
+      setErrorMessage(
+        "Password must contain at least 8 characters."
+      );
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMessage("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        "http://localhost:8080/api/signup",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: fullName.trim(),
+            email: username.trim(),
+            password,
+          }),
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || data.success !== true) {
+        setErrorMessage(
+          data.message ||
+            "Account creation failed. Please try again."
+        );
+        return;
+      }
+
+      setIsCreateAccount(false);
+      setPassword("");
+      setConfirmPassword("");
+
+      setErrorMessage(
+        "Account created successfully! Please log in."
+      );
+    } catch (error) {
+      console.error("Signup error:", error);
+
+      setErrorMessage(
+        "Unable to connect to WCET backend. Make sure the backend is running on port 8080."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Toggle the registration form
+  const toggleCreateAccount = () => {
+    setIsCreateAccount((current) => {
+      const next = !current;
+
+      console.log(
+        "Create Account form:",
+        next ? "OPEN" : "CLOSED"
+      );
+
+      return next;
+    });
+
+    setErrorMessage("");
+    setPassword("");
+    setConfirmPassword("");
+    setShowPassword(false);
   };
 
   return (
@@ -152,21 +237,24 @@ function LoginDashboard({ onLogin, onCreateAccount }) {
     return sum;
 }`}</pre>
               </div>
+<div className="cfg-mini">
+  <div className="mini-node start">Start</div>
+  <div className="mini-arrow">↓</div>
 
-              <div className="cfg-mini">
-                <div className="cfg-node start">Start</div>
-                <div className="cfg-arrow">↓</div>
-                <div className="cfg-node decision">i &lt; n?</div>
+  <div className="mini-node decision">
+    <span>i &lt; n?</span>
+  </div>
 
-                <div className="cfg-branches">
-                  <span>Yes</span>
-                  <div className="cfg-node body">Body</div>
-                  <span>No</span>
-                </div>
+  <div className="mini-branches">
+    <span>Yes</span>
+    <div className="mini-node body">Body</div>
+    <span>No</span>
+  </div>
 
-                <div className="cfg-arrow">↓</div>
-                <div className="cfg-node end">End</div>
-              </div>
+  <div className="mini-arrow">↓</div>
+  <div className="mini-node end">End</div>
+</div>
+
 
               <div className="analysis-labels">
                 <div>
@@ -266,57 +354,105 @@ function LoginDashboard({ onLogin, onCreateAccount }) {
             <div className="why-flow">
               <div className="why-item">
                 <div className="why-icon">▣</div>
-                <span>Real-Time<br />Systems</span>
+                <span>
+                  Real-Time
+                  <br />
+                  Systems
+                </span>
               </div>
 
               <div className="why-arrow">→</div>
 
               <div className="why-item">
                 <div className="why-icon purple">◉</div>
-                <span>Timing<br />Constraints</span>
+                <span>
+                  Timing
+                  <br />
+                  Constraints
+                </span>
               </div>
 
               <div className="why-arrow">→</div>
 
               <div className="why-item">
                 <div className="why-icon">◷</div>
-                <span>WCET<br />Estimation</span>
+                <span>
+                  WCET
+                  <br />
+                  Estimation
+                </span>
               </div>
 
               <div className="why-arrow">→</div>
 
               <div className="why-item">
                 <div className="why-icon purple">✓</div>
-                <span>Predictable<br />Execution</span>
+                <span>
+                  Predictable
+                  <br />
+                  Execution
+                </span>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="login-section">
+        {/* LOGIN AND CREATE ACCOUNT SECTION */}
+        <section className="login-section" id="login-section">
           <div className="login-card">
             <div className="login-logo">W</div>
 
-            <h2>Welcome Back</h2>
+            <h2>
+              {isCreateAccount ? "Create Account" : "Welcome Back"}
+            </h2>
+
             <p className="login-subtitle">
-              Access your WCET Analyzer
+              {isCreateAccount
+                ? "Register to access your WCET Analyzer"
+                : "Access your WCET Analyzer"}
             </p>
 
             {errorMessage && (
-              <div className="login-error" role="alert">
-                ⚠️ {errorMessage}
+              <div
+                className="login-error"
+                role="alert"
+                aria-live="polite"
+              >
+                {errorMessage}
               </div>
             )}
 
-            <form onSubmit={handleLogin}>
+            <form
+              onSubmit={isCreateAccount ? handleSignup : handleLogin}
+            >
+              {isCreateAccount && (
+                <div className="input-group">
+                  <label>
+                    <span className="input-icon">♙</span>
+                    <input
+                      type="text"
+                      placeholder="Full Name"
+                      value={fullName}
+                      onChange={(e) =>
+                        setFullName(e.target.value)
+                      }
+                      autoComplete="name"
+                      required
+                    />
+                  </label>
+                </div>
+              )}
+
               <div className="input-group">
                 <label>
-                  <span className="input-icon">♙</span>
+                  <span className="input-icon">✉</span>
                   <input
                     type="email"
                     placeholder="Email"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    onChange={(e) =>
+                      setUsername(e.target.value)
+                    }
                     autoComplete="email"
                     required
                   />
@@ -330,44 +466,95 @@ function LoginDashboard({ onLogin, onCreateAccount }) {
                     type={showPassword ? "text" : "password"}
                     placeholder="Password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="current-password"
+                    onChange={(e) =>
+                      setPassword(e.target.value)
+                    }
+                    autoComplete={
+                      isCreateAccount
+                        ? "new-password"
+                        : "current-password"
+                    }
+                    minLength={isCreateAccount ? 8 : undefined}
                     required
                   />
 
                   <button
                     type="button"
                     className="show-password"
-                    onClick={() => setShowPassword((value) => !value)}
+                    onClick={() =>
+                      setShowPassword((value) => !value)
+                    }
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                   >
                     {showPassword ? "Hide" : "Show"}
                   </button>
                 </label>
               </div>
 
+              {isCreateAccount && (
+                <div className="input-group">
+                  <label>
+                    <span className="input-icon">🔒</span>
+                    <input
+                      type="password"
+                      placeholder="Confirm Password"
+                      value={confirmPassword}
+                      onChange={(e) =>
+                        setConfirmPassword(e.target.value)
+                      }
+                      autoComplete="new-password"
+                      minLength={8}
+                      required
+                    />
+                  </label>
+                </div>
+              )}
+
               <button
                 type="submit"
                 className="login-button"
                 disabled={loading}
               >
-                <span>{loading ? "Logging in..." : "Login"}</span>
+                <span>
+                  {loading
+                    ? isCreateAccount
+                      ? "Creating Account..."
+                      : "Logging in..."
+                    : isCreateAccount
+                      ? "Create Account"
+                      : "Login"}
+                </span>
                 <span>→</span>
               </button>
             </form>
 
             <div className="or-divider">
               <span></span>
-              <b>OR</b>
+              <b>{isCreateAccount ? "OR" : "NEW HERE?"}</b>
               <span></span>
             </div>
 
             <button
               type="button"
               className="create-account-button"
-              onClick={handleCreateAccount}
+              onClick={() => {
+                toggleCreateAccount();
+
+                document
+                  .getElementById("login-section")
+                  ?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center",
+                  });
+              }}
+              disabled={loading}
             >
               <span className="create-icon">♙+</span>
-              <span>Create Account</span>
+              <span>
+                {isCreateAccount ? "Back to Login" : "Create Account"}
+              </span>
             </button>
 
             <div className="security-message">

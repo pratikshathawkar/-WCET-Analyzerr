@@ -1,3 +1,5 @@
+
+       
 package auth;
 
 import db.Database;
@@ -5,6 +7,7 @@ import db.Database;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class AuthService {
 
@@ -13,6 +16,17 @@ public class AuthService {
             String email,
             String password
     ) {
+        // Validate input
+        if (name == null || name.trim().isEmpty()
+                || email == null || email.trim().isEmpty()
+                || password == null || password.isEmpty()) {
+
+            System.out.println("Signup failed: Missing required fields.");
+            return false;
+        }
+
+        name = name.trim();
+        email = email.trim().toLowerCase();
 
         String checkSql =
                 "SELECT id FROM users WHERE email = ?";
@@ -20,21 +34,34 @@ public class AuthService {
         String insertSql =
                 "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)";
 
-        try (Connection connection = Database.getConnection();
-             PreparedStatement checkStatement =
-                     connection.prepareStatement(checkSql)) {
+        try (Connection connection = Database.getConnection()) {
 
-            checkStatement.setString(1, email);
+            // Check whether email already exists
+            try (PreparedStatement checkStatement =
+                         connection.prepareStatement(checkSql)) {
 
-            ResultSet result = checkStatement.executeQuery();
+                checkStatement.setString(1, email);
 
-            if (result.next()) {
-                return false;
+                try (ResultSet result = checkStatement.executeQuery()) {
+                    if (result.next()) {
+                        System.out.println(
+                                "Signup failed: Email already exists."
+                        );
+                        return false;
+                    }
+                }
             }
 
+            // Hash password
             String hashedPassword =
                     PasswordUtil.hashPassword(password);
 
+            if (hashedPassword == null || hashedPassword.isEmpty()) {
+                System.out.println("Signup failed: Password hashing failed.");
+                return false;
+            }
+
+            // Insert new user
             try (PreparedStatement insertStatement =
                          connection.prepareStatement(insertSql)) {
 
@@ -42,12 +69,28 @@ public class AuthService {
                 insertStatement.setString(2, email);
                 insertStatement.setString(3, hashedPassword);
 
-                insertStatement.executeUpdate();
+                int rowsInserted = insertStatement.executeUpdate();
 
-                return true;
+                if (rowsInserted == 1) {
+                    System.out.println(
+                            "Signup successful for: " + email
+                    );
+                    return true;
+                }
+
+                System.out.println("Signup failed: No row inserted.");
+                return false;
             }
 
+        } catch (SQLException e) {
+            System.err.println("Database error during signup:");
+            System.err.println("SQL state: " + e.getSQLState());
+            System.err.println("Error code: " + e.getErrorCode());
+            e.printStackTrace();
+            return false;
+
         } catch (Exception e) {
+            System.err.println("Signup error:");
             e.printStackTrace();
             return false;
         }
@@ -57,6 +100,10 @@ public class AuthService {
             String email,
             String password
     ) {
+        if (email == null || email.trim().isEmpty()
+                || password == null || password.isEmpty()) {
+            return null;
+        }
 
         String sql =
                 "SELECT id, name, email, password_hash " +
@@ -66,47 +113,45 @@ public class AuthService {
              PreparedStatement statement =
                      connection.prepareStatement(sql)) {
 
-            statement.setString(1, email);
+            statement.setString(
+                    1,
+                    email.trim().toLowerCase()
+            );
 
-            ResultSet result = statement.executeQuery();
+            try (ResultSet result = statement.executeQuery()) {
 
-            if (result.next()) {
+                if (result.next()) {
+                    String storedPassword =
+                            result.getString("password_hash");
 
-                String storedPassword =
-                        result.getString("password_hash");
-                        System.out.println("Login account found: true");
-System.out.println(
-        "Password hash exists: " +
-        (storedPassword != null && !storedPassword.isEmpty())
-);
-System.out.println(
-        "Stored hash has expected format: " +
-        (storedPassword != null &&
-         storedPassword.matches("^[^:]+:[^:]+$"))
-);
+                    boolean valid =
+                            PasswordUtil.verifyPassword(
+                                    password,
+                                    storedPassword
+                            );
 
-                boolean valid =
-                        PasswordUtil.verifyPassword(
-                                password,
-                                storedPassword
-                        );
-                        System.out.println(
-        "Password verification passed: " + valid
-);
-
-                if (valid) {
-                    return new User(
-                            result.getInt("id"),
-                            result.getString("name"),
-                            result.getString("email")
+                    System.out.println(
+                            "Login account found: true"
                     );
+                    System.out.println(
+                            "Password verification passed: " + valid
+                    );
+
+                    if (valid) {
+                        return new User(
+                                result.getInt("id"),
+                                result.getString("name"),
+                                result.getString("email")
+                        );
+                    }
                 }
             }
 
         } catch (Exception e) {
+            System.err.println("Login error:");
             e.printStackTrace();
         }
-        
+
         return null;
     }
 }
