@@ -1,4 +1,3 @@
-
 package api;
 
 import com.sun.net.httpserver.HttpExchange;
@@ -10,6 +9,8 @@ import cfg.CFGBuilder;
 import cfg.CFGNode;
 import analysis.AbstractInterpreter;
 import analysis.AbstractValue;
+import auth.AuthService;
+import auth.User;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,9 +37,22 @@ public class WCETServer {
                         0
                 );
 
+        // WCET Analyzer API
         server.createContext(
                 "/api/analyze",
                 WCETServer::handleAnalyze
+        );
+
+        // Signup API
+        server.createContext(
+                "/api/signup",
+                WCETServer::handleSignup
+        );
+
+        // Login API
+        server.createContext(
+                "/api/login",
+                WCETServer::handleLogin
         );
 
         server.setExecutor(null);
@@ -63,30 +77,9 @@ public class WCETServer {
             HttpExchange exchange)
             throws IOException {
 
-        // ------------------------------------------
-        // CORS
-        // ------------------------------------------
+        addCorsHeaders(exchange);
 
-        exchange.getResponseHeaders().add(
-                "Access-Control-Allow-Origin",
-                "*"
-        );
-
-        exchange.getResponseHeaders().add(
-                "Access-Control-Allow-Headers",
-                "Content-Type"
-        );
-
-        exchange.getResponseHeaders().add(
-                "Access-Control-Allow-Methods",
-                "POST, OPTIONS"
-        );
-
-
-        // ------------------------------------------
-        // OPTIONS REQUEST
-        // ------------------------------------------
-
+        // OPTIONS request
         if (exchange.getRequestMethod()
                 .equalsIgnoreCase("OPTIONS")) {
 
@@ -98,11 +91,7 @@ public class WCETServer {
             return;
         }
 
-
-        // ------------------------------------------
-        // ONLY POST ALLOWED
-        // ------------------------------------------
-
+        // Only POST allowed
         if (!exchange.getRequestMethod()
                 .equalsIgnoreCase("POST")) {
 
@@ -114,7 +103,6 @@ public class WCETServer {
 
             return;
         }
-
 
         // ==========================================
         // READ SOURCE CODE
@@ -181,9 +169,7 @@ public class WCETServer {
         CFG cfg =
                 builder.buildCFG(statements);
 
-
         // Display CFG in backend terminal
-
         cfg.displayCFG();
 
 
@@ -217,19 +203,16 @@ public class WCETServer {
         boolean firstVariable =
                 true;
 
-
         for (
                 Map.Entry<String, AbstractValue> entry :
                 interpreter.getVariables().entrySet()
         ) {
 
             if (!firstVariable) {
-
                 abstractState.append(",");
             }
 
             firstVariable = false;
-
 
             abstractState.append("{");
 
@@ -242,7 +225,6 @@ public class WCETServer {
                     )
                     .append("\",");
 
-
             abstractState
                     .append("\"lower\":")
                     .append(
@@ -251,7 +233,6 @@ public class WCETServer {
                     )
                     .append(",");
 
-
             abstractState
                     .append("\"upper\":")
                     .append(
@@ -259,10 +240,8 @@ public class WCETServer {
                                     .getUpper()
                     );
 
-
             abstractState.append("}");
         }
-
 
         abstractState.append("]");
 
@@ -331,6 +310,316 @@ public class WCETServer {
 
 
     // ==========================================
+    // HANDLE SIGNUP
+    // ==========================================
+
+    private static void handleSignup(
+            HttpExchange exchange)
+            throws IOException {
+
+        addCorsHeaders(exchange);
+
+        // OPTIONS request
+        if (exchange.getRequestMethod()
+                .equalsIgnoreCase("OPTIONS")) {
+
+            exchange.sendResponseHeaders(
+                    204,
+                    -1
+            );
+
+            return;
+        }
+
+        // Only POST allowed
+        if (!exchange.getRequestMethod()
+                .equalsIgnoreCase("POST")) {
+
+            sendResponse(
+                    exchange,
+                    405,
+                    "{\"error\":\"Only POST is allowed\"}"
+            );
+
+            return;
+        }
+
+
+        // ==========================================
+        // READ REQUEST
+        // ==========================================
+
+        String body =
+                new String(
+                        exchange.getRequestBody()
+                                .readAllBytes(),
+                        StandardCharsets.UTF_8
+                );
+
+        System.out.println();
+        System.out.println(
+                "===== SIGNUP REQUEST ====="
+        );
+
+        System.out.println(body);
+
+
+        // ==========================================
+        // EXTRACT DATA
+        // ==========================================
+
+        String name =
+                extractJsonValue(
+                        body,
+                        "name"
+                );
+
+        String email =
+                extractJsonValue(
+                        body,
+                        "email"
+                );
+
+        String password =
+                extractJsonValue(
+                        body,
+                        "password"
+                );
+
+
+        // ==========================================
+        // REGISTER USER
+        // ==========================================
+
+        boolean registered =
+                AuthService.registerUser(
+                        name,
+                        email,
+                        password
+                );
+
+
+        if (registered) {
+
+            sendResponse(
+                    exchange,
+                    200,
+                    "{"
+                    + "\"success\":true,"
+                    + "\"message\":\"Account created successfully\""
+                    + "}"
+            );
+
+        } else {
+
+            sendResponse(
+                    exchange,
+                    400,
+                    "{"
+                    + "\"success\":false,"
+                    + "\"message\":\"Email already exists or registration failed\""
+                    + "}"
+            );
+        }
+    }
+
+
+    // ==========================================
+    // HANDLE LOGIN
+    // ==========================================
+
+    private static void handleLogin(
+            HttpExchange exchange)
+            throws IOException {
+
+        addCorsHeaders(exchange);
+
+        // OPTIONS request
+        if (exchange.getRequestMethod()
+                .equalsIgnoreCase("OPTIONS")) {
+
+            exchange.sendResponseHeaders(
+                    204,
+                    -1
+            );
+
+            return;
+        }
+
+        // Only POST allowed
+        if (!exchange.getRequestMethod()
+                .equalsIgnoreCase("POST")) {
+
+            sendResponse(
+                    exchange,
+                    405,
+                    "{\"error\":\"Only POST is allowed\"}"
+            );
+
+            return;
+        }
+
+
+        // ==========================================
+        // READ REQUEST
+        // ==========================================
+
+        String body =
+                new String(
+                        exchange.getRequestBody()
+                                .readAllBytes(),
+                        StandardCharsets.UTF_8
+                );
+
+        System.out.println();
+        System.out.println(
+                "===== LOGIN REQUEST ====="
+        );
+
+        System.out.println(body);
+
+
+        // ==========================================
+        // EXTRACT DATA
+        // ==========================================
+
+        String email =
+                extractJsonValue(
+                        body,
+                        "email"
+                );
+
+        String password =
+                extractJsonValue(
+                        body,
+                        "password"
+                );
+
+
+        // ==========================================
+        // LOGIN USER
+        // ==========================================
+
+        User user =
+                AuthService.loginUser(
+                        email,
+                        password
+                );
+
+
+        // ==========================================
+        // LOGIN SUCCESS
+        // ==========================================
+
+        if (user != null) {
+
+            String response =
+                    "{"
+
+                    + "\"success\":true,"
+
+                    + "\"message\":\"Login successful\","
+
+                    + "\"user\":{"
+
+                    + "\"id\":"
+                    + user.getId()
+                    + ","
+
+                    + "\"name\":\""
+                    + escapeJson(
+                            user.getName()
+                    )
+                    + "\","
+
+                    + "\"email\":\""
+                    + escapeJson(
+                            user.getEmail()
+                    )
+                    + "\""
+
+                    + "}"
+
+                    + "}";
+
+            sendResponse(
+                    exchange,
+                    200,
+                    response
+            );
+
+        }
+
+        // ==========================================
+        // LOGIN FAILED
+        // ==========================================
+
+        else {
+
+            sendResponse(
+                    exchange,
+                    401,
+                    "{"
+                    + "\"success\":false,"
+                    + "\"message\":\"Invalid email or password\""
+                    + "}"
+            );
+        }
+    }
+
+
+    // ==========================================
+    // CORS HEADERS
+    // ==========================================
+
+    private static void addCorsHeaders(
+            HttpExchange exchange) {
+
+        exchange.getResponseHeaders().set(
+                "Access-Control-Allow-Origin",
+                "*"
+        );
+
+        exchange.getResponseHeaders().set(
+                "Access-Control-Allow-Headers",
+                "Content-Type"
+        );
+
+        exchange.getResponseHeaders().set(
+                "Access-Control-Allow-Methods",
+                "POST, OPTIONS"
+        );
+    }
+
+
+    // ==========================================
+    // EXTRACT JSON VALUE
+    // ==========================================
+
+    private static String extractJsonValue(
+            String json,
+            String key) {
+
+        Pattern pattern =
+                Pattern.compile(
+                        "\"" +
+                        Pattern.quote(key) +
+                        "\"\\s*:\\s*\"([^\"]*)\""
+                );
+
+        Matcher matcher =
+                pattern.matcher(json);
+
+        if (matcher.find()) {
+
+            return matcher.group(1);
+        }
+
+        return "";
+    }
+
+
+    // ==========================================
     // EXTRACT STATEMENTS FOR CFG
     // ==========================================
 
@@ -340,25 +629,19 @@ public class WCETServer {
         List<String> statements =
                 new ArrayList<>();
 
-
         String[] lines =
                 code.split("\\R");
-
 
         for (String line : lines) {
 
             line =
                     line.trim();
 
-
             if (line.isEmpty()) {
-
                 continue;
             }
 
-
             // Ignore braces
-
             if (line.equals("{")
                     || line.equals("}")) {
 
@@ -434,7 +717,6 @@ public class WCETServer {
             }
         }
 
-
         return statements;
     }
 
@@ -449,7 +731,6 @@ public class WCETServer {
         StringBuilder json =
                 new StringBuilder();
 
-
         json.append("{");
 
 
@@ -461,10 +742,8 @@ public class WCETServer {
                 "\"nodes\":["
         );
 
-
         List<CFGNode> nodes =
                 cfg.getNodes();
-
 
         for (
                 int i = 0;
@@ -475,9 +754,7 @@ public class WCETServer {
             CFGNode node =
                     nodes.get(i);
 
-
             json.append("{");
-
 
             json.append(
                     "\"id\":"
@@ -487,9 +764,7 @@ public class WCETServer {
                     node.getId()
             );
 
-
             json.append(",");
-
 
             json.append(
                     "\"statement\":\""
@@ -503,9 +778,7 @@ public class WCETServer {
 
             json.append("\"");
 
-
             json.append("}");
-
 
             if (
                     i < nodes.size() - 1
@@ -514,7 +787,6 @@ public class WCETServer {
                 json.append(",");
             }
         }
-
 
         json.append("],");
 
@@ -527,38 +799,28 @@ public class WCETServer {
                 "\"edges\":["
         );
 
-
         boolean firstEdge =
                 true;
 
-
         for (CFGNode from :
                 nodes) {
-
 
             List<CFGNode> nextNodes =
                     cfg.getEdges()
                             .get(from);
 
-
             if (nextNodes == null) {
-
                 continue;
             }
-
 
             for (CFGNode to :
                     nextNodes) {
 
-
                 if (!firstEdge) {
-
                     json.append(",");
                 }
 
-
                 json.append("{");
-
 
                 json.append(
                         "\"from\":"
@@ -568,9 +830,7 @@ public class WCETServer {
                         from.getId()
                 );
 
-
                 json.append(",");
-
 
                 json.append(
                         "\"to\":"
@@ -580,20 +840,15 @@ public class WCETServer {
                         to.getId()
                 );
 
-
                 json.append("}");
-
 
                 firstEdge = false;
             }
         }
 
-
         json.append("]");
 
-
         json.append("}");
-
 
         return json.toString();
     }
@@ -605,6 +860,10 @@ public class WCETServer {
 
     private static String escapeJson(
             String text) {
+
+        if (text == null) {
+            return "";
+        }
 
         return text
                 .replace(
@@ -633,8 +892,8 @@ public class WCETServer {
     private static int countLines(
             String code) {
 
-        int count = 0;
-
+        int count =
+                0;
 
         for (
                 String line :
@@ -648,7 +907,6 @@ public class WCETServer {
                 count++;
             }
         }
-
 
         return count;
     }
@@ -666,35 +924,29 @@ public class WCETServer {
                         "for\\s*\\([^;]*;\\s*\\w+\\s*<\\s*(\\d+)"
                 );
 
-
         Matcher matcher =
                 loopPattern.matcher(code);
-
 
         int total =
                 1;
 
-
         boolean found =
                 false;
-
 
         while (
                 matcher.find()
         ) {
 
-            found = true;
-
+            found =
+                    true;
 
             int bound =
                     Integer.parseInt(
                             matcher.group(1)
                     );
 
-
             total *= bound;
         }
-
 
         return found
                 ? total
@@ -712,66 +964,54 @@ public class WCETServer {
         int cost =
                 0;
 
-
         cost += count(
                 code,
                 "+"
         );
-
 
         cost += count(
                 code,
                 "-"
         );
 
-
         cost += count(
                 code,
                 "*"
         );
-
 
         cost += count(
                 code,
                 "/"
         );
 
-
         cost += count(
                 code,
                 "<"
         );
-
 
         cost += count(
                 code,
                 ">"
         );
 
-
         cost += count(
                 code,
                 "=="
         );
-
 
         cost += count(
                 code,
                 "="
         );
 
-
         cost += count(
                 code,
                 "["
         );
 
-
         if (cost == 0) {
-
             cost = 1;
         }
-
 
         return cost;
     }
@@ -787,24 +1027,20 @@ public class WCETServer {
         int cost =
                 0;
 
-
         cost += count(
                 code,
                 "if"
         );
-
 
         cost += count(
                 code,
                 "for"
         );
 
-
         cost += count(
                 code,
                 "while"
         );
-
 
         return Math.max(
                 cost,
@@ -824,10 +1060,8 @@ public class WCETServer {
         int count =
                 0;
 
-
         int index =
                 0;
-
 
         while (
                 (index =
@@ -840,11 +1074,9 @@ public class WCETServer {
 
             count++;
 
-
             index +=
                     word.length();
         }
-
 
         return count;
     }
@@ -860,33 +1092,26 @@ public class WCETServer {
             String response)
             throws IOException {
 
-
         byte[] data =
                 response.getBytes(
                         StandardCharsets.UTF_8
                 );
-
 
         exchange.getResponseHeaders().set(
                 "Content-Type",
                 "application/json"
         );
 
-
         exchange.sendResponseHeaders(
                 statusCode,
                 data.length
         );
 
-
         OutputStream output =
                 exchange.getResponseBody();
 
-
         output.write(data);
-
 
         output.close();
     }
 }
-

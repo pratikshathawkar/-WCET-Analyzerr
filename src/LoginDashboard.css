@@ -1,0 +1,1302 @@
+/* =========================================================
+   WCET ANALYZER - LANDING / LOGIN PAGE
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+.wcet-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      circle at 15% 20%,
+      rgba(0, 136, 255, 0.10),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 80% 30%,
+      rgba(102, 70, 255, 0.08),
+      transparent 30%
+    ),
+    #020b1d;
+
+  color: #ffffff;
+
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  overflow-x: hidden;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.wcet-header {
+  height: 72px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 4%;
+
+  border-bottom: 1px solid rgba(90, 150, 255, 0.20);
+
+  background: rgba(2, 11, 29, 0.90);
+
+  backdrop-filter: blur(15px);
+
+  position: relative;
+  z-index: 10;
+}
+
+
+/* BRAND */
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.brand-logo {
+  width: 43px;
+  height: 43px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 28px;
+  font-weight: 900;
+
+  background:
+    linear-gradient(
+      135deg,
+      #00aaff,
+      #635bff
+    );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  color: transparent;
+
+  filter:
+    drop-shadow(
+      0 0 12px rgba(0, 174, 255, 0.35)
+    );
+}
+
+.brand-name {
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+
+/* HEADER BADGE */
+
+.header-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 9px 17px;
+
+  border-radius: 25px;
+
+  border: 1px solid rgba(61, 145, 255, 0.30);
+
+  background:
+    rgba(12, 40, 80, 0.45);
+
+  color: #cfe5ff;
+
+  font-size: 13px;
+}
+
+.header-badge b {
+  color: #638dff;
+}
+
+
+/* =========================================================
+   MAIN
+   ========================================================= */
+
+.wcet-main {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1.65fr)
+    minmax(390px, 0.75fr);
+
+  gap: 40px;
+
+  max-width: 1500px;
+
+  margin: auto;
+
+  padding:
+    48px 4%
+    50px;
+}
+
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.hero-section {
+  min-width: 0;
+}
+
+.hero-badge {
+  display: inline-flex;
+
+  gap: 10px;
+
+  padding: 8px 14px;
+
+  border-radius: 20px;
+
+  border: 1px solid rgba(0, 190, 255, 0.50);
+
+  color: #00c7ff;
+
+  font-size: 12px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.5px;
+
+  background:
+    rgba(0, 115, 255, 0.07);
+
+  box-shadow:
+    0 0 20px
+    rgba(0, 140, 255, 0.08);
+}
+
+
+.hero-content {
+  display: grid;
+
+  grid-template-columns:
+    1fr
+    minmax(350px, 0.85fr);
+
+  gap: 25px;
+
+  align-items: center;
+
+  margin-top: 25px;
+}
+
+
+.hero-text h1 {
+  font-size: clamp(42px, 4vw, 65px);
+
+  line-height: 1.02;
+
+  letter-spacing: -2.5px;
+
+  margin: 0 0 25px;
+
+  font-weight: 800;
+}
+
+.hero-text h1 span {
+  background:
+    linear-gradient(
+      90deg,
+      #00baff,
+      #5668ff,
+      #8855ff
+    );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  color: transparent;
+}
+
+
+.hero-description {
+  max-width: 650px;
+
+  color: #b7c7dd;
+
+  font-size: 16px;
+
+  line-height: 1.65;
+
+  margin: 0;
+}
+
+
+/* =========================================================
+   CODE + CFG VISUAL
+   ========================================================= */
+
+.analysis-visual {
+  min-height: 270px;
+
+  display: grid;
+
+  grid-template-columns:
+    1.1fr
+    0.8fr;
+
+  gap: 15px;
+
+  padding: 20px;
+
+  border:
+    1px solid
+    rgba(47, 140, 255, 0.25);
+
+  border-radius: 15px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(10, 35, 75, 0.65),
+      rgba(2, 16, 40, 0.65)
+    );
+
+  box-shadow:
+    inset 0 0 40px
+    rgba(0, 110, 255, 0.04);
+}
+
+
+/* CODE */
+
+.code-window {
+  background: #031127;
+
+  border-radius: 10px;
+
+  border:
+    1px solid
+    rgba(39, 141, 255, 0.20);
+
+  overflow: hidden;
+}
+
+.window-dots {
+  display: flex;
+
+  gap: 6px;
+
+  padding: 10px 12px;
+
+  border-bottom:
+    1px solid
+    rgba(255,255,255,0.05);
+}
+
+.window-dots span {
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  background: #347fc4;
+}
+
+.code-window pre {
+  margin: 0;
+
+  padding: 14px;
+
+  color: #45bfff;
+
+  font-size: 10px;
+
+  line-height: 1.6;
+
+  overflow: hidden;
+}
+
+
+/* CFG */
+
+.cfg-mini {
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 6px;
+}
+
+.cfg-node {
+  min-width: 80px;
+
+  padding: 7px 12px;
+
+  text-align: center;
+
+  border:
+    1px solid
+    #188fff;
+
+  border-radius: 18px;
+
+  color: #6bd0ff;
+
+  background:
+    rgba(0, 107, 255, 0.08);
+
+  font-size: 11px;
+
+  box-shadow:
+    0 0 15px
+    rgba(0, 140, 255, 0.08);
+}
+
+.cfg-node.decision {
+  border-radius: 5px;
+
+  transform: rotate(45deg);
+
+  margin: 10px;
+}
+
+.cfg-node.decision::first-line {
+  transform: rotate(-45deg);
+}
+
+.cfg-node.body {
+  border-color: #755cff;
+
+  color: #b6aaff;
+}
+
+.cfg-node.end {
+  border-color: #14c8ff;
+}
+
+.cfg-arrow {
+  color: #2aaeff;
+
+  font-size: 16px;
+}
+
+.cfg-branches {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  font-size: 9px;
+
+  color: #788ca8;
+}
+
+
+/* ANALYSIS LABELS */
+
+.analysis-labels {
+  display: none;
+}
+
+
+/* =========================================================
+   FEATURE CARDS
+   ========================================================= */
+
+.feature-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap: 18px;
+
+  margin-top: 25px;
+}
+
+.feature-card {
+  position: relative;
+
+  min-height: 185px;
+
+  padding: 20px;
+
+  border-radius: 14px;
+
+  border:
+    1px solid
+    rgba(0, 162, 255, 0.45);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(8, 31, 67, 0.75),
+      rgba(2, 16, 40, 0.70)
+    );
+
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+
+  border-color: #00aaff;
+
+  box-shadow:
+    0 12px 35px
+    rgba(0, 140, 255, 0.12);
+}
+
+.purple-card {
+  border-color:
+    rgba(116, 81, 255, 0.55);
+}
+
+.feature-icon {
+  width: 42px;
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 11px;
+
+  font-size: 23px;
+
+  color: #00c8ff;
+
+  background:
+    rgba(0, 157, 255, 0.12);
+
+  border:
+    1px solid
+    rgba(0, 170, 255, 0.35);
+}
+
+.time-icon {
+  color: #b18cff;
+
+  background:
+    rgba(114, 76, 255, 0.14);
+
+  border-color:
+    rgba(130, 90, 255, 0.35);
+}
+
+.ai-icon {
+  color: #26e7e2;
+
+  background:
+    rgba(0, 220, 220, 0.10);
+}
+
+.feature-number {
+  position: absolute;
+
+  top: 20px;
+  right: 20px;
+
+  color: #7290b6;
+
+  font-size: 12px;
+}
+
+.feature-card h3 {
+  margin:
+    15px 0 8px;
+
+  font-size: 17px;
+}
+
+.feature-card p {
+  margin: 0;
+
+  color: #93a8c4;
+
+  font-size: 13px;
+
+  line-height: 1.55;
+}
+
+
+/* =========================================================
+   ANALYSIS FLOW
+   ========================================================= */
+
+.analysis-flow {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 10px;
+
+  margin-top: 25px;
+}
+
+.flow-card {
+  flex: 1;
+
+  min-height: 115px;
+
+  padding: 14px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  text-align: center;
+
+  border:
+    1px solid
+    rgba(46, 135, 255, 0.30);
+
+  border-radius: 12px;
+
+  background:
+    rgba(4, 25, 55, 0.65);
+}
+
+.flow-icon {
+  width: 40px;
+  height: 40px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+
+  color: #00baff;
+
+  background:
+    rgba(0, 170, 255, 0.10);
+
+  font-size: 17px;
+}
+
+.purple-flow {
+  color: #a286ff;
+}
+
+.cyan-flow {
+  color: #20e0dd;
+}
+
+.blue-flow {
+  color: #69aaff;
+}
+
+.flow-card h4 {
+  margin:
+    8px 0 3px;
+
+  font-size: 12px;
+}
+
+.flow-card p {
+  margin: 0;
+
+  color: #6e87a8;
+
+  font-size: 9px;
+}
+
+.flow-arrow {
+  color: #298eff;
+
+  font-size: 25px;
+}
+
+
+/* =========================================================
+   WHY WCET
+   ========================================================= */
+
+.why-wcet {
+  display: grid;
+
+  grid-template-columns:
+    0.8fr
+    1.4fr;
+
+  gap: 30px;
+
+  margin-top: 28px;
+
+  padding-top: 22px;
+
+  border-top:
+    1px solid
+    rgba(70, 120, 190, 0.20);
+}
+
+.why-text h2 {
+  margin: 0 0 10px;
+
+  font-size: 21px;
+}
+
+.why-text p {
+  margin: 0;
+
+  color: #93a8c4;
+
+  font-size: 13px;
+
+  line-height: 1.6;
+}
+
+.why-flow {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+}
+
+.why-item {
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  gap: 8px;
+
+  text-align: center;
+}
+
+.why-icon {
+  width: 48px;
+  height: 48px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  border:
+    1px solid
+    rgba(0, 170, 255, 0.45);
+
+  color: #27baff;
+
+  background:
+    rgba(0, 135, 255, 0.08);
+
+  font-size: 19px;
+}
+
+.why-icon.purple {
+  color: #aa8cff;
+
+  border-color:
+    rgba(128, 90, 255, 0.45);
+}
+
+.why-item span {
+  color: #8da2be;
+
+  font-size: 10px;
+
+  line-height: 1.3;
+}
+
+.why-arrow {
+  color: #438cff;
+
+  font-size: 20px;
+}
+
+
+/* =========================================================
+   LOGIN SECTION
+   ========================================================= */
+
+.login-section {
+  position: relative;
+}
+
+.login-card {
+  position: sticky;
+
+  top: 25px;
+
+  min-height: 650px;
+
+  padding: 45px 30px 25px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  border-radius: 18px;
+
+  border:
+    1px solid
+    rgba(100, 122, 255, 0.65);
+
+  background:
+    linear-gradient(
+      150deg,
+      rgba(9, 34, 72, 0.80),
+      rgba(2, 14, 35, 0.90)
+    );
+
+  box-shadow:
+    0 20px 70px
+    rgba(0, 80, 220, 0.12),
+
+    inset 0 0 50px
+    rgba(30, 90, 255, 0.04);
+
+  overflow: hidden;
+}
+
+.login-card::after {
+  content: "";
+
+  position: absolute;
+
+  width: 300px;
+  height: 150px;
+
+  right: -100px;
+  bottom: -60px;
+
+  border-radius: 50%;
+
+  border-top:
+    1px solid
+    rgba(60, 110, 255, 0.40);
+
+  transform: rotate(-15deg);
+
+  box-shadow:
+    0 -25px 0
+    rgba(40, 80, 220, 0.05),
+    0 -50px 0
+    rgba(40, 80, 220, 0.04);
+
+  pointer-events: none;
+}
+
+
+/* LOGIN LOGO */
+
+.login-logo {
+  width: 75px;
+  height: 75px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  font-size: 50px;
+
+  font-weight: 900;
+
+  background:
+    linear-gradient(
+      135deg,
+      #00aaff,
+      #765cff
+    );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  color: transparent;
+
+  filter:
+    drop-shadow(
+      0 0 18px
+      rgba(0, 170, 255, 0.35)
+    );
+}
+
+.login-card h2 {
+  margin:
+    10px 0 7px;
+
+  font-size: 31px;
+
+  letter-spacing: -1px;
+}
+
+.login-subtitle {
+  margin:
+    0 0 32px;
+
+  color: #91a9c8;
+
+  font-size: 15px;
+}
+
+
+/* =========================================================
+   INPUTS
+   ========================================================= */
+
+.login-card form {
+  width: 100%;
+}
+
+.input-group {
+  margin-bottom: 18px;
+}
+
+.input-group label {
+  height: 58px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  padding:
+    0 16px;
+
+  border-radius: 11px;
+
+  border:
+    1px solid
+    rgba(74, 137, 218, 0.50);
+
+  background:
+    rgba(2, 18, 42, 0.70);
+
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.input-group label:focus-within {
+  border-color: #00aaff;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(0, 150, 255, 0.08);
+}
+
+.input-icon {
+  color: #aac5e6;
+
+  font-size: 19px;
+}
+
+.input-group input {
+  flex: 1;
+
+  min-width: 0;
+
+  border: none;
+
+  outline: none;
+
+  background: transparent;
+
+  color: white;
+
+  font-size: 14px;
+}
+
+.input-group input::placeholder {
+  color: #7690b1;
+}
+
+.show-password {
+  border: none;
+
+  background: transparent;
+
+  color: #b5c9e4;
+
+  cursor: pointer;
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   LOGIN BUTTON
+   ========================================================= */
+
+.login-button {
+  width: 100%;
+
+  height: 58px;
+
+  margin-top: 5px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 14px;
+
+  border: none;
+
+  border-radius: 11px;
+
+  cursor: pointer;
+
+  color: white;
+
+  font-size: 16px;
+
+  font-weight: 700;
+
+  background:
+    linear-gradient(
+      90deg,
+      #09a8f5,
+      #5361ff
+    );
+
+  box-shadow:
+    0 8px 25px
+    rgba(39, 120, 255, 0.20);
+
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+
+.login-button:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 12px 35px
+    rgba(39, 120, 255, 0.32);
+}
+
+
+/* =========================================================
+   OR
+   ========================================================= */
+
+.or-divider {
+  width: 100%;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 15px;
+
+  margin:
+    22px 0;
+}
+
+.or-divider span {
+  height: 1px;
+
+  flex: 1;
+
+  background:
+    rgba(89, 127, 185, 0.35);
+}
+
+.or-divider b {
+  color: #00c6ff;
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   CREATE ACCOUNT
+   ========================================================= */
+
+.create-account-button {
+  width: 100%;
+
+  height: 55px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 10px;
+
+  border-radius: 11px;
+
+  border:
+    1px solid
+    #149fff;
+
+  background:
+    rgba(0, 100, 220, 0.05);
+
+  color: #cce7ff;
+
+  font-size: 15px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s,
+    transform 0.2s;
+}
+
+.create-account-button:hover {
+  background:
+    rgba(0, 130, 255, 0.12);
+
+  transform: translateY(-2px);
+}
+
+.create-icon {
+  font-size: 20px;
+
+  color: #58c8ff;
+}
+
+
+/* =========================================================
+   SECURITY
+   ========================================================= */
+
+.security-message {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 8px;
+
+  margin-top: 28px;
+
+  color: #829abb;
+
+  font-size: 11px;
+
+  text-align: center;
+}
+
+.security-message span:first-child {
+  color: #9bbcff;
+
+  font-size: 17px;
+}
+
+
+/* =========================================================
+   LOGIN FOOTER
+   ========================================================= */
+
+.login-footer {
+  margin-top: auto;
+
+  padding-top: 30px;
+
+  color: #7186a5;
+
+  font-size: 11px;
+
+  text-align: center;
+}
+
+.login-footer span {
+  margin: 0 8px;
+
+  color: #4b6390;
+}
+
+
+/* =========================================================
+   PAGE FOOTER
+   ========================================================= */
+
+.wcet-footer {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 18px;
+
+  padding: 20px;
+
+  border-top:
+    1px solid
+    rgba(70, 120, 190, 0.15);
+
+  color: #617794;
+
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1200px) {
+
+  .wcet-main {
+    grid-template-columns:
+      1fr
+      420px;
+  }
+
+  .hero-content {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-visual {
+    max-width: 700px;
+  }
+}
+
+
+@media (max-width: 900px) {
+
+  .wcet-main {
+    grid-template-columns: 1fr;
+
+    padding:
+      35px 5%;
+  }
+
+  .login-section {
+    order: -1;
+  }
+
+  .login-card {
+    position: relative;
+
+    top: 0;
+
+    max-width: 500px;
+
+    margin: auto;
+  }
+
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-flow {
+    flex-wrap: wrap;
+  }
+
+  .flow-card {
+    min-width: 40%;
+  }
+
+  .why-wcet {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+@media (max-width: 600px) {
+
+  .wcet-header {
+    padding: 0 20px;
+  }
+
+  .brand-name {
+    font-size: 20px;
+  }
+
+  .header-badge {
+    display: none;
+  }
+
+  .hero-text h1 {
+    font-size: 40px;
+
+    letter-spacing: -1.5px;
+  }
+
+  .analysis-visual {
+    grid-template-columns: 1fr;
+
+    padding: 12px;
+  }
+
+  .cfg-mini {
+    display: none;
+  }
+
+  .feature-grid {
+    gap: 12px;
+  }
+
+  .analysis-flow {
+    display: grid;
+
+    grid-template-columns:
+      1fr 1fr;
+  }
+
+  .flow-arrow {
+    display: none;
+  }
+
+  .why-flow {
+    flex-wrap: wrap;
+
+    gap: 15px;
+  }
+
+  .why-arrow {
+    display: none;
+  }
+
+  .wcet-footer {
+    flex-direction: column;
+
+    gap: 6px;
+  }
+
+  .login-card {
+    padding:
+      35px 20px 25px;
+  }
+}
