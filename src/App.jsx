@@ -36,7 +36,7 @@ function App({ user, onLogout }) {
 
     try {
       const response = await fetch(
-        "http://localhost:8080/api/analyze",
+        "https://wcet-analyzerr.onrender.com/api/analyze",
         {
           method: "POST",
           headers: {
